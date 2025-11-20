@@ -1,5 +1,10 @@
 # @taskgenius/calendar
 
+[![npm version](https://badge.fury.io/js/@taskgenius%2Fcalendar.svg)](https://www.npmjs.com/package/@taskgenius/calendar)
+[![CI](https://github.com/taskgenius/calendar/actions/workflows/ci.yml/badge.svg)](https://github.com/taskgenius/calendar/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![npm downloads](https://img.shields.io/npm/dm/@taskgenius/calendar.svg)](https://www.npmjs.com/package/@taskgenius/calendar)
+
 Used in [taskgenius/taskgenius-plugin](https://github.com/taskgenius/taskgenius-plugin)
 
 A lightweight, configurable TypeScript calendar component library with drag-and-drop support.
@@ -400,7 +405,16 @@ interface DateAdapter<T> {
 
 ## 📄 License
 
-MIT ©TaskGenius.md
+MIT ©TaskGenius
+
+## 📦 Publishing
+
+This package uses npm Trusted Publishing for secure, automated releases. See the [Publishing Guide](docs/PUBLISHING.md) for details on:
+
+- Creating new releases
+- Version management
+- Trusted Publishing configuration
+- Troubleshooting
 
 ## 🤝 Contributing
 
