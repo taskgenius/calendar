@@ -77,12 +77,6 @@ export class MonthRenderer<T> {
     const header = createElement("div", "tg-month-header");
     const allDayNames = ["日", "一", "二", "三", "四", "五", "六"];
 
-    // Get the correct column count and day order
-    const colCount =
-      this.engine.getWeekCount(this.adapter.create()) > 0
-        ? this.engine.generateGrid(this.adapter.create())[0]?.length || 7
-        : 7;
-
     // Generate day names based on firstDayOfWeek and showWeekends
     const dayNames: string[] = [];
     const firstDay = (this.engine as any).firstDayOfWeek || 0;
