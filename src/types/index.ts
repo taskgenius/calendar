@@ -31,7 +31,7 @@ export interface CalendarEvent {
 /**
  * Available calendar view types
  */
-export type ViewType = 'month' | 'week' | 'day';
+export type ViewType = "month" | "week" | "day";
 
 /**
  * Configuration for calendar view
@@ -43,6 +43,10 @@ export interface ViewConfig {
   showDateHeader?: boolean;
   /** Show week numbers in month view */
   showWeekNumbers?: boolean;
+  /** First day of week: 0 = Sunday, 1 = Monday, 6 = Saturday (default: 0) */
+  firstDayOfWeek?: 0 | 1 | 6;
+  /** Show weekends (Saturday and Sunday) (default: true) */
+  showWeekends?: boolean;
 }
 
 // =============================================================================
@@ -59,17 +63,23 @@ export interface DraggableConfig {
   snapMinutes?: number;
   /** Opacity of ghost element during drag (0-1) */
   ghostOpacity?: number;
+  /** Only adjust date when dragging, keep time unchanged (default: false) */
+  dateOnly?: boolean;
 }
 
 /**
  * Drag operation modes
  */
-export type DragMode = 'move' | 'resize-left' | 'resize-right' | 'resize-bottom';
+export type DragMode =
+  | "move"
+  | "resize-left"
+  | "resize-right"
+  | "resize-bottom";
 
 /**
  * Drag operation types
  */
-export type DragType = 'month' | 'time';
+export type DragType = "month" | "time";
 
 /**
  * Internal drag state
@@ -90,6 +100,42 @@ export interface DragState<T> {
   origStartMin?: number;
   origDuration?: number;
   renderCallback: () => void;
+}
+
+// =============================================================================
+// Render Hook Types
+// =============================================================================
+
+/**
+ * Context provided to date cell render hook
+ */
+export interface DateCellContext {
+  /** Current date */
+  date: Date;
+  /** Events on this date */
+  events: CalendarEvent[];
+  /** DOM element of the cell */
+  cellEl: HTMLElement;
+  /** Whether this date is today */
+  isToday: boolean;
+  /** Whether this date is in the past */
+  isPastDue: boolean;
+  /** Whether this date is in the future */
+  isFuture: boolean;
+  /** Whether this date belongs to the current month */
+  isThisMonth: boolean;
+}
+
+/**
+ * Style configuration returned by event style hook
+ */
+export interface EventStyle {
+  /** Additional CSS class name */
+  className?: string;
+  /** Background color */
+  color?: string;
+  /** Opacity (0-1) */
+  opacity?: number;
 }
 
 // =============================================================================
@@ -195,14 +241,24 @@ export interface CalendarConfig {
   theme?: ThemeConfig;
   /** Custom date adapter instance */
   dateAdapter?: DateAdapter<unknown>;
+  /** Show event count badges on date cells in month view (default: false) */
+  showEventCounts?: boolean;
   /** Callback when an event is clicked */
   onEventClick?: (event: CalendarEvent) => void;
   /** Callback when an event is dropped after dragging */
-  onEventDrop?: (event: CalendarEvent, newStart: string, newEnd: string) => void;
+  onEventDrop?: (
+    event: CalendarEvent,
+    newStart: string,
+    newEnd: string,
+  ) => void;
   /** Callback when the view type changes */
   onViewChange?: (viewType: ViewType) => void;
   /** Callback when navigating to a different date */
   onDateChange?: (date: string) => void;
+  /** Hook to customize date cell rendering */
+  onRenderDateCell?: (ctx: DateCellContext) => void;
+  /** Hook to customize event styling */
+  onStyleEvent?: (event: CalendarEvent) => EventStyle;
 }
 
 /**
@@ -211,11 +267,20 @@ export interface CalendarConfig {
 export interface ResolvedCalendarConfig {
   view: Required<ViewConfig>;
   draggable: Required<DraggableConfig>;
-  theme: Required<ThemeConfig> & { fontSize: Required<NonNullable<ThemeConfig['fontSize']>> };
+  theme: Required<ThemeConfig> & {
+    fontSize: Required<NonNullable<ThemeConfig["fontSize"]>>;
+  };
+  showEventCounts: boolean;
   onEventClick?: (event: CalendarEvent) => void;
-  onEventDrop?: (event: CalendarEvent, newStart: string, newEnd: string) => void;
+  onEventDrop?: (
+    event: CalendarEvent,
+    newStart: string,
+    newEnd: string,
+  ) => void;
   onViewChange?: (viewType: ViewType) => void;
   onDateChange?: (date: string) => void;
+  onRenderDateCell?: (ctx: DateCellContext) => void;
+  onStyleEvent?: (event: CalendarEvent) => EventStyle;
 }
 
 // =============================================================================
@@ -225,7 +290,7 @@ export interface ResolvedCalendarConfig {
 /**
  * Time unit for date operations
  */
-export type TimeUnit = 'year' | 'month' | 'week' | 'day' | 'hour' | 'minute';
+export type TimeUnit = "year" | "month" | "week" | "day" | "hour" | "minute";
 
 /**
  * Abstract date adapter interface for pluggable date libraries

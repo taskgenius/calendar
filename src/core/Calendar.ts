@@ -92,10 +92,16 @@ export class Calendar<T = Dayjs> {
     );
 
     // 6. Initialize engines
-    this.monthEngine = new MonthEngine<T>(this.adapter);
+    this.monthEngine = new MonthEngine<T>(
+      this.adapter,
+      this.config.view.firstDayOfWeek,
+      this.config.view.showWeekends,
+    );
     this.timeEngine = new TimeEngine<T>(
       this.adapter,
       this.config.theme.cellHeight,
+      this.config.view.showWeekends,
+      this.config.view.firstDayOfWeek,
     );
 
     // 7. Initialize renderers
@@ -103,11 +109,15 @@ export class Calendar<T = Dayjs> {
       this.monthEngine,
       this.adapter,
       this.config.theme,
+      this.config.showEventCounts,
+      this.config.onRenderDateCell,
+      this.config.onStyleEvent,
     );
     this.timeRenderer = new TimeRenderer<T>(
       this.timeEngine,
       this.adapter,
       this.config.theme,
+      this.config.onStyleEvent,
     );
 
     // 8. Initial render
@@ -407,11 +417,14 @@ export class Calendar<T = Dayjs> {
         type: config.view?.type || "week",
         showDateHeader: config.view?.showDateHeader ?? true,
         showWeekNumbers: config.view?.showWeekNumbers ?? false,
+        firstDayOfWeek: config.view?.firstDayOfWeek ?? 0,
+        showWeekends: config.view?.showWeekends ?? true,
       },
       draggable: {
         enabled: config.draggable?.enabled ?? true,
         snapMinutes: config.draggable?.snapMinutes ?? 15,
         ghostOpacity: config.draggable?.ghostOpacity ?? 0.5,
+        dateOnly: config.draggable?.dateOnly ?? false,
       },
       theme: {
         primaryColor: config.theme?.primaryColor || "#3b82f6",
@@ -421,12 +434,16 @@ export class Calendar<T = Dayjs> {
           event: config.theme?.fontSize?.event || "12px",
         },
       },
+      showEventCounts: config.showEventCounts ?? false,
     };
 
     if (config.onEventClick) resolved.onEventClick = config.onEventClick;
     if (config.onEventDrop) resolved.onEventDrop = config.onEventDrop;
     if (config.onViewChange) resolved.onViewChange = config.onViewChange;
     if (config.onDateChange) resolved.onDateChange = config.onDateChange;
+    if (config.onRenderDateCell)
+      resolved.onRenderDateCell = config.onRenderDateCell;
+    if (config.onStyleEvent) resolved.onStyleEvent = config.onStyleEvent;
 
     return resolved;
   }

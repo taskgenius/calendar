@@ -7,8 +7,8 @@ import type {
   CalendarEvent,
   TimeLayoutItem,
   TimeColumn,
-  ViewType
-} from '../types';
+  ViewType,
+} from "../types";
 
 /**
  * Internal event representation with calculated geometry
@@ -33,10 +33,14 @@ export class TimeEngine<T> {
   /**
    * @param adapter - Date adapter instance
    * @param cellHeight - Height of each hour cell in pixels (default: 60)
+   * @param showWeekends - Whether to show weekend columns (default: true)
+   * @param firstDayOfWeek - First day of week: 0 = Sunday, 1 = Monday (default: 0)
    */
   constructor(
     private adapter: DateAdapter<T>,
-    cellHeight: number = 60
+    cellHeight: number = 60,
+    private showWeekends: boolean = true,
+    private firstDayOfWeek: number = 0,
   ) {
     this.cellHeight = cellHeight;
   }
@@ -52,21 +56,42 @@ export class TimeEngine<T> {
   generateColumns(currentDate: T, viewType: ViewType): Array<TimeColumn<T>> {
     const columns: Array<TimeColumn<T>> = [];
 
-    if (viewType === 'day') {
+    if (viewType === "day") {
       columns.push({
         date: currentDate,
-        dateStr: this.adapter.format(currentDate, 'YYYY-MM-DD')
+        dateStr: this.adapter.format(currentDate, "YYYY-MM-DD"),
       });
     } else {
-      // Week view - generate 7 columns starting from week start
-      let curr = this.adapter.startOf(currentDate, 'week');
+      // Week view - generate columns starting from configured first day of week
+      let weekStart = this.adapter.startOf(currentDate, "week");
 
+      // Adjust to firstDayOfWeek
+      const currentDayOfWeek = this.adapter.day(weekStart);
+      if (currentDayOfWeek !== this.firstDayOfWeek) {
+        let diff = this.firstDayOfWeek - currentDayOfWeek;
+        if (diff > 0) {
+          // firstDayOfWeek is later in the week, move forward
+          weekStart = this.adapter.add(weekStart, diff, "day");
+        } else {
+          // firstDayOfWeek is earlier, move backward
+          weekStart = this.adapter.add(weekStart, diff, "day");
+        }
+      }
+
+      let curr = weekStart;
       for (let i = 0; i < 7; i++) {
-        columns.push({
-          date: curr,
-          dateStr: this.adapter.format(curr, 'YYYY-MM-DD')
-        });
-        curr = this.adapter.add(curr, 1, 'day');
+        const dayOfWeek = this.adapter.day(curr);
+        const isWeekend = dayOfWeek === 0 || dayOfWeek === 6; // Sunday or Saturday
+
+        // Only add if weekends are shown or it's not a weekend
+        if (this.showWeekends || !isWeekend) {
+          columns.push({
+            date: curr,
+            dateStr: this.adapter.format(curr, "YYYY-MM-DD"),
+          });
+        }
+
+        curr = this.adapter.add(curr, 1, "day");
       }
     }
 
@@ -101,7 +126,7 @@ export class TimeEngine<T> {
     }
 
     // Step 5: Convert to TimeLayoutItem
-    return dayEvents.map(ev => ({
+    return dayEvents.map((ev) => ({
       event: ev.event,
       top: ev.top,
       height: ev.height,
@@ -109,7 +134,7 @@ export class TimeEngine<T> {
       widthPercent: ev.widthPercent,
       colIndex: ev.colIndex,
       startMin: ev.startMin,
-      endMin: ev.endMin
+      endMin: ev.endMin,
     }));
   }
 
@@ -122,7 +147,7 @@ export class TimeEngine<T> {
   isSingleDayEvent(event: CalendarEvent): boolean {
     const start = this.adapter.parse(event.start);
     const end = this.adapter.parse(event.end);
-    return this.adapter.isSame(start, end, 'day');
+    return this.adapter.isSame(start, end, "day");
   }
 
   /**
@@ -150,13 +175,13 @@ export class TimeEngine<T> {
    */
   private filterAndCalculateGeometry(
     events: CalendarEvent[],
-    dateStr: string
+    dateStr: string,
   ): EventGeometry[] {
     const result: EventGeometry[] = [];
 
     for (const event of events) {
       const start = this.adapter.parse(event.start);
-      const startDateStr = this.adapter.format(start, 'YYYY-MM-DD');
+      const startDateStr = this.adapter.format(start, "YYYY-MM-DD");
 
       // Only include single-day events on this date
       if (startDateStr !== dateStr || !this.isSingleDayEvent(event)) {
@@ -164,8 +189,9 @@ export class TimeEngine<T> {
       }
 
       const end = this.adapter.parse(event.end);
-      const startMin = this.adapter.hour(start) * 60 + this.adapter.minute(start);
-      const duration = this.adapter.diff(end, start, 'minute');
+      const startMin =
+        this.adapter.hour(start) * 60 + this.adapter.minute(start);
+      const duration = this.adapter.diff(end, start, "minute");
       const endMin = startMin + duration;
 
       const pixelsPerMinute = this.cellHeight / 60;
@@ -180,7 +206,7 @@ export class TimeEngine<T> {
         endMin,
         colIndex: 0,
         widthPercent: 100,
-        leftPercent: 0
+        leftPercent: 0,
       });
     }
 

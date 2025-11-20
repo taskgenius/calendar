@@ -6,11 +6,11 @@ import type {
   CalendarEvent,
   ThemeConfig,
   ViewType,
-  TimeLayoutItem
-} from '../types';
-import type { TimeEngine } from '../engines/TimeEngine';
-import type { DragController } from '../core/DragController';
-import { createElement, setStyles, clearElement } from '../utils/dom';
+  TimeLayoutItem,
+} from "../types";
+import type { TimeEngine } from "../engines/TimeEngine";
+import type { DragController } from "../core/DragController";
+import { createElement, setStyles, clearElement } from "../utils/dom";
 
 /**
  * Renders the week/day time view calendar
@@ -19,7 +19,12 @@ export class TimeRenderer<T> {
   constructor(
     private engine: TimeEngine<T>,
     private adapter: DateAdapter<T>,
-    private theme: Required<ThemeConfig> & { fontSize: Required<NonNullable<ThemeConfig['fontSize']>> }
+    private theme: Required<ThemeConfig> & {
+      fontSize: Required<NonNullable<ThemeConfig["fontSize"]>>;
+    },
+    private onStyleEvent?: (
+      event: CalendarEvent,
+    ) => import("../types").EventStyle,
   ) {}
 
   /**
@@ -33,7 +38,7 @@ export class TimeRenderer<T> {
     dragController: DragController<T>,
     renderCallback: () => void,
     onEventClick?: (event: CalendarEvent) => void,
-    initialScrollTop?: number | null
+    initialScrollTop?: number | null,
   ): void {
     clearElement(container);
 
@@ -44,8 +49,8 @@ export class TimeRenderer<T> {
     container.appendChild(header);
 
     // Render scrollable body
-    const scrollWrap = createElement('div', 'tg-time-grid-container');
-    const bodyInner = createElement('div', 'tg-time-body');
+    const scrollWrap = createElement("div", "tg-time-grid-container");
+    const bodyInner = createElement("div", "tg-time-body");
 
     // Render time axis
     const axis = this.renderTimeAxis();
@@ -58,7 +63,7 @@ export class TimeRenderer<T> {
         events,
         dragController,
         renderCallback,
-        onEventClick
+        onEventClick,
       );
       bodyInner.appendChild(col);
     }
@@ -81,20 +86,22 @@ export class TimeRenderer<T> {
   // Private Methods
   // ==========================================================================
 
-  private renderHeader(columns: Array<{ date: T; dateStr: string }>): HTMLElement {
-    const header = createElement('div', 'tg-time-header');
-    header.style.paddingLeft = '60px';
+  private renderHeader(
+    columns: Array<{ date: T; dateStr: string }>,
+  ): HTMLElement {
+    const header = createElement("div", "tg-time-header");
+    header.style.paddingLeft = "60px";
 
-    const dayNames = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+    const dayNames = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
     const today = this.adapter.create();
 
     for (const col of columns) {
-      const cell = createElement('div', 'tg-time-header-cell');
+      const cell = createElement("div", "tg-time-header-cell");
 
       // Highlight today
-      if (this.adapter.isSame(col.date, today, 'day')) {
-        cell.style.backgroundColor = 'rgba(59, 130, 246, 0.1)';
-        cell.style.color = '#3b82f6';
+      if (this.adapter.isSame(col.date, today, "day")) {
+        cell.style.backgroundColor = "rgba(59, 130, 246, 0.1)";
+        cell.style.color = "#3b82f6";
       }
 
       const dayName = dayNames[this.adapter.day(col.date)];
@@ -112,14 +119,14 @@ export class TimeRenderer<T> {
   }
 
   private renderTimeAxis(): HTMLElement {
-    const axis = createElement('div', 'tg-time-axis');
+    const axis = createElement("div", "tg-time-axis");
 
     for (let i = 0; i < 24; i++) {
-      const label = createElement('div', 'tg-time-axis-label');
+      const label = createElement("div", "tg-time-axis-label");
       label.textContent = `${i}:00`;
       setStyles(label, {
-        position: 'absolute',
-        top: `${i * this.theme.cellHeight}px`
+        position: "absolute",
+        top: `${i * this.theme.cellHeight}px`,
       });
       axis.appendChild(label);
     }
@@ -132,10 +139,10 @@ export class TimeRenderer<T> {
     events: CalendarEvent[],
     dragController: DragController<T>,
     renderCallback: () => void,
-    onEventClick?: (event: CalendarEvent) => void
+    onEventClick?: (event: CalendarEvent) => void,
   ): HTMLElement {
-    const col = createElement('div', 'tg-day-column');
-    col.dataset['date'] = colData.dateStr;
+    const col = createElement("div", "tg-day-column");
+    col.dataset["date"] = colData.dateStr;
 
     // Calculate layout for events on this day
     const layout = this.engine.calculateLayout(events, colData.dateStr);
@@ -145,7 +152,7 @@ export class TimeRenderer<T> {
         item,
         dragController,
         renderCallback,
-        onEventClick
+        onEventClick,
       );
       col.appendChild(eventEl);
     }
@@ -157,10 +164,27 @@ export class TimeRenderer<T> {
     item: TimeLayoutItem,
     dragController: DragController<T>,
     renderCallback: () => void,
-    onEventClick?: (event: CalendarEvent) => void
+    onEventClick?: (event: CalendarEvent) => void,
   ): HTMLElement {
-    const el = createElement('div', 'tg-event-base tg-event-block');
-    el.dataset['eid'] = item.event.id;
+    const el = createElement("div", "tg-event-base tg-event-block");
+    el.dataset["eid"] = item.event.id;
+
+    // Apply custom styling if hook is provided
+    let bgColor = item.event.color || "#3b82f6";
+    let customOpacity: number | undefined;
+
+    if (this.onStyleEvent) {
+      const style = this.onStyleEvent(item.event);
+      if (style.className) {
+        el.classList.add(style.className);
+      }
+      if (style.color) {
+        bgColor = style.color;
+      }
+      if (style.opacity !== undefined) {
+        customOpacity = style.opacity;
+      }
+    }
 
     // Set position and size
     setStyles(el, {
@@ -168,31 +192,35 @@ export class TimeRenderer<T> {
       height: `${item.height}px`,
       width: `calc(${item.widthPercent}% - 2px)`,
       left: `${item.leftPercent}%`,
-      backgroundColor: item.event.color || '#3b82f6'
+      backgroundColor: bgColor,
     });
+
+    if (customOpacity !== undefined) {
+      el.style.opacity = customOpacity.toString();
+    }
 
     // Format times
     const startDate = this.adapter.parse(item.event.start);
     const endDate = this.adapter.parse(item.event.end);
-    const startTime = this.adapter.format(startDate, 'HH:mm');
-    const endTime = this.adapter.format(endDate, 'HH:mm');
+    const startTime = this.adapter.format(startDate, "HH:mm");
+    const endTime = this.adapter.format(endDate, "HH:mm");
 
     // Create content
-    const timeText = createElement('div', 'tg-time-text');
+    const timeText = createElement("div", "tg-time-text");
     timeText.textContent = `${startTime} - ${endTime}`;
     el.appendChild(timeText);
 
-    const titleText = createElement('div', 'tg-event-title');
+    const titleText = createElement("div", "tg-event-title");
     titleText.textContent = item.event.title;
     el.appendChild(titleText);
 
     // Add resize handle
-    const resizeHandle = createElement('div', 'tg-resize-handle tg-resize-v');
+    const resizeHandle = createElement("div", "tg-resize-handle tg-resize-v");
     el.appendChild(resizeHandle);
 
     // Event click handler
     if (onEventClick) {
-      el.addEventListener('click', (e) => {
+      el.addEventListener("click", (e) => {
         e.stopPropagation();
         onEventClick(item.event);
       });

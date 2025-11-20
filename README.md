@@ -13,7 +13,10 @@ A lightweight, configurable TypeScript calendar component library with drag-and-
 
 - 📅 **Three view modes** - Month, week, and day views
 - 🎨 **Fully configurable** - Themes, colors, and styles
-- 🔄 **Drag-and-drop** - Move and resize events
+- 🔄 **Drag-and-drop** - Move and resize events (with date-only mode)
+- 🗓️ **Flexible week layout** - Configure first day of week, hide weekends
+- 🔢 **Event count badges** - Display event counts on date cells
+- 🎨 **Custom rendering hooks** - Full control over date cells and event styling
 - 📦 **Lightweight** - <12KB gzipped
 - 🔌 **Pluggable adapters** - Support for different date libraries
 - ⚡ **Zero dependencies** - Core with optional Day.js
@@ -118,10 +121,13 @@ interface CalendarConfig {
   events?: CalendarEvent[];
   draggable?: DraggableConfig;
   theme?: ThemeConfig;
+  showEventCounts?: boolean;  // Default: false - Show event count badges on date cells
   onEventClick?: (event: CalendarEvent) => void;
   onEventDrop?: (event: CalendarEvent, newStart: string, newEnd: string) => void;
   onViewChange?: (viewType: ViewType) => void;
   onDateChange?: (date: string) => void;
+  onRenderDateCell?: (ctx: DateCellContext) => void;  // Custom date cell rendering
+  onStyleEvent?: (event: CalendarEvent) => EventStyle;  // Custom event styling
 }
 ```
 
@@ -132,6 +138,8 @@ interface ViewConfig {
   type: 'month' | 'week' | 'day';  // Default: 'week'
   showDateHeader?: boolean;         // Default: true
   showWeekNumbers?: boolean;        // Default: false
+  firstDayOfWeek?: 0 | 1 | 6;      // Default: 0 (Sunday)
+  showWeekends?: boolean;           // Default: true
 }
 ```
 
@@ -142,6 +150,7 @@ interface DraggableConfig {
   enabled: boolean;      // Default: true
   snapMinutes?: number;  // Default: 15
   ghostOpacity?: number; // Default: 0.5
+  dateOnly?: boolean;    // Default: false - Only adjust dates, keep time unchanged
 }
 ```
 
@@ -246,6 +255,78 @@ const calendar = new Calendar('#app', {
 const calendar = new Calendar('#app', {
   draggable: {
     enabled: false
+  }
+});
+```
+
+### Date-Only Drag Mode
+
+```typescript
+const calendar = new Calendar('#app', {
+  draggable: {
+    enabled: true,
+    dateOnly: true  // Only adjust dates, preserve original time
+  }
+});
+```
+
+### Week Configuration
+
+```typescript
+const calendar = new Calendar('#app', {
+  view: {
+    type: 'week',
+    firstDayOfWeek: 1,  // Start week on Monday
+    showWeekends: false  // Hide Saturday and Sunday
+  }
+});
+```
+
+### Event Count Badges
+
+```typescript
+const calendar = new Calendar('#app', {
+  view: { type: 'month' },
+  showEventCounts: true  // Display event count on each date cell
+});
+```
+
+### Custom Date Cell Rendering
+
+```typescript
+const calendar = new Calendar('#app', {
+  onRenderDateCell: (ctx) => {
+    // Add custom badge for past due dates with events
+    if (ctx.isPastDue && ctx.events.length > 0) {
+      const badge = document.createElement('div');
+      badge.className = 'overdue-badge';
+      badge.textContent = '!';
+      badge.style.cssText = 'position: absolute; top: 2px; right: 2px; background: #ef4444; color: white; border-radius: 50%; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; font-size: 10px;';
+      ctx.cellEl.appendChild(badge);
+    }
+    
+    // Add custom class for weekends
+    if (ctx.date.getDay() === 0 || ctx.date.getDay() === 6) {
+      ctx.cellEl.classList.add('weekend');
+    }
+  }
+});
+```
+
+### Custom Event Styling
+
+```typescript
+const calendar = new Calendar('#app', {
+  onStyleEvent: (event) => {
+    // Style based on metadata
+    const priority = event.metadata?.priority as number;
+    const isCompleted = event.metadata?.completed as boolean;
+    
+    return {
+      color: priority >= 2 ? '#ef4444' : '#3b82f6',
+      opacity: isCompleted ? 0.5 : 1,
+      className: isCompleted ? 'completed-event' : ''
+    };
   }
 });
 ```
