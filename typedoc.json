@@ -1,0 +1,33 @@
+{
+  "entryPoints": ["src/index.ts"],
+  "out": "docs",
+  "plugin": ["typedoc-plugin-markdown"],
+  "readme": "README.md",
+  "exclude": [
+    "**/node_modules/**",
+    "**/tests/**",
+    "**/examples/**"
+  ],
+  "excludePrivate": true,
+  "excludeProtected": false,
+  "excludeInternal": true,
+  "categorizeByGroup": true,
+  "categoryOrder": [
+    "Main API",
+    "Date Adapters",
+    "Configuration",
+    "Types",
+    "*"
+  ],
+  "gitRevision": "master",
+  "name": "@taskgenius/calendar",
+  "includeVersion": true,
+  "sort": ["source-order"],
+  "kindSortOrder": [
+    "Class",
+    "Interface",
+    "Type",
+    "Function",
+    "Variable"
+  ]
+}

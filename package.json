@@ -1,0 +1,96 @@
+{
+  "name": "@taskgenius/calendar",
+  "version": "0.1.0",
+  "description": "A lightweight, configurable TypeScript calendar component with drag-and-drop support",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs",
+      "types": "./dist/index.d.ts"
+    },
+    "./dayjs": {
+      "import": "./dist/adapters/dayjs.js",
+      "require": "./dist/adapters/dayjs.cjs",
+      "types": "./dist/adapters/dayjs.d.ts"
+    },
+    "./native": {
+      "import": "./dist/adapters/native.js",
+      "require": "./dist/adapters/native.cjs",
+      "types": "./dist/adapters/native.d.ts"
+    },
+    "./date-fns": {
+      "import": "./dist/adapters/date-fns.js",
+      "require": "./dist/adapters/date-fns.cjs",
+      "types": "./dist/adapters/date-fns.d.ts"
+    },
+    "./styles.css": {
+      "default": "./dist/styles.css"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:ui": "vitest --ui",
+    "docs": "typedoc src/index.ts",
+    "demo": "cd examples/demo && npm run dev",
+    "prepublishOnly": "npm run build && npm run test"
+  },
+  "peerDependencies": {
+    "dayjs": "^1.11.0",
+    "date-fns": "^2.30.0 || ^3.0.0"
+  },
+  "peerDependenciesMeta": {
+    "dayjs": {
+      "optional": true
+    },
+    "date-fns": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@vitest/coverage-v8": "^1.0.0",
+    "@vitest/ui": "^1.0.0",
+    "dayjs": "^1.11.10",
+    "jsdom": "^23.0.0",
+    "terser": "^5.26.0",
+    "typedoc": "^0.25.0",
+    "typedoc-plugin-markdown": "^3.17.0",
+    "typescript": "^5.3.0",
+    "vite": "^5.0.0",
+    "vite-plugin-dts": "^3.6.0",
+    "vitest": "^1.0.0"
+  },
+  "keywords": [
+    "calendar",
+    "typescript",
+    "drag-and-drop",
+    "schedule",
+    "events",
+    "week-view",
+    "month-view",
+    "day-view"
+  ],
+  "author": "",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/taskgenius/calendar.git"
+  },
+  "bugs": {
+    "url": "https://github.com/taskgenius/calendar/issues"
+  },
+  "homepage": "https://github.com/taskgenius/calendar#readme"
+}

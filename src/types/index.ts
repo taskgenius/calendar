@@ -1,0 +1,281 @@
+/**
+ * Core type definitions for @taskgenius/calendar
+ */
+
+// =============================================================================
+// Event Types
+// =============================================================================
+
+/**
+ * Represents a calendar event
+ */
+export interface CalendarEvent {
+  /** Unique identifier for the event */
+  id: string;
+  /** Display title of the event */
+  title: string;
+  /** Start date/time in ISO 8601 format (YYYY-MM-DD HH:mm) */
+  start: string;
+  /** End date/time in ISO 8601 format (YYYY-MM-DD HH:mm) */
+  end: string;
+  /** CSS color value for the event */
+  color?: string;
+  /** Additional custom data */
+  metadata?: Record<string, unknown>;
+}
+
+// =============================================================================
+// View Types
+// =============================================================================
+
+/**
+ * Available calendar view types
+ */
+export type ViewType = 'month' | 'week' | 'day';
+
+/**
+ * Configuration for calendar view
+ */
+export interface ViewConfig {
+  /** Current view type */
+  type: ViewType;
+  /** Show date header in time views */
+  showDateHeader?: boolean;
+  /** Show week numbers in month view */
+  showWeekNumbers?: boolean;
+}
+
+// =============================================================================
+// Draggable Types
+// =============================================================================
+
+/**
+ * Configuration for drag-and-drop functionality
+ */
+export interface DraggableConfig {
+  /** Enable drag-and-drop */
+  enabled: boolean;
+  /** Snap to minutes interval (default: 15) */
+  snapMinutes?: number;
+  /** Opacity of ghost element during drag (0-1) */
+  ghostOpacity?: number;
+}
+
+/**
+ * Drag operation modes
+ */
+export type DragMode = 'move' | 'resize-left' | 'resize-right' | 'resize-bottom';
+
+/**
+ * Drag operation types
+ */
+export type DragType = 'month' | 'time';
+
+/**
+ * Internal drag state
+ */
+export interface DragState<T> {
+  type: DragType;
+  mode: DragMode;
+  event: CalendarEvent;
+  startX: number;
+  startY: number;
+  startDate: T;
+  endDate: T;
+  tentativeStart?: T;
+  tentativeEnd?: T;
+  cellW?: number;
+  colW?: number;
+  clickOffsetDays?: number;
+  origStartMin?: number;
+  origDuration?: number;
+  renderCallback: () => void;
+}
+
+// =============================================================================
+// Theme Types
+// =============================================================================
+
+/**
+ * Configuration for calendar theme/styling
+ */
+export interface ThemeConfig {
+  /** Primary accent color */
+  primaryColor?: string;
+  /** Height of each hour cell in pixels (default: 60) */
+  cellHeight?: number;
+  /** Font size configuration */
+  fontSize?: {
+    /** Header font size */
+    header?: string;
+    /** Event font size */
+    event?: string;
+  };
+}
+
+// =============================================================================
+// Layout Types
+// =============================================================================
+
+/**
+ * Layout information for a month view event
+ */
+export interface MonthLayoutItem {
+  /** Original event data */
+  event: CalendarEvent;
+  /** Start index within week (0-6) */
+  startIdx: number;
+  /** Number of days the event spans */
+  span: number;
+  /** Vertical slot position */
+  slot: number;
+  /** Whether this is the start of the event */
+  isStart: boolean;
+  /** Whether this is the end of the event */
+  isEnd: boolean;
+}
+
+/**
+ * Layout information for a time view event
+ */
+export interface TimeLayoutItem {
+  /** Original event data */
+  event: CalendarEvent;
+  /** Top position in pixels */
+  top: number;
+  /** Height in pixels */
+  height: number;
+  /** Left position as percentage (0-100) */
+  leftPercent: number;
+  /** Width as percentage (0-100) */
+  widthPercent: number;
+  /** Column index for overlap handling */
+  colIndex: number;
+  /** Start time in minutes from midnight */
+  startMin: number;
+  /** End time in minutes from midnight */
+  endMin: number;
+}
+
+/**
+ * Grid cell information for month view
+ */
+export interface GridCell<T> {
+  /** Date object */
+  date: T;
+  /** Formatted date string (YYYY-MM-DD) */
+  dateStr: string;
+}
+
+/**
+ * Column information for time view
+ */
+export interface TimeColumn<T> {
+  /** Date object */
+  date: T;
+  /** Formatted date string (YYYY-MM-DD) */
+  dateStr: string;
+}
+
+// =============================================================================
+// Configuration Types
+// =============================================================================
+
+/**
+ * Main calendar configuration
+ */
+export interface CalendarConfig {
+  /** View configuration */
+  view?: ViewConfig;
+  /** Initial events to display */
+  events?: CalendarEvent[];
+  /** Drag-and-drop configuration */
+  draggable?: DraggableConfig;
+  /** Theme/styling configuration */
+  theme?: ThemeConfig;
+  /** Custom date adapter instance */
+  dateAdapter?: DateAdapter<unknown>;
+  /** Callback when an event is clicked */
+  onEventClick?: (event: CalendarEvent) => void;
+  /** Callback when an event is dropped after dragging */
+  onEventDrop?: (event: CalendarEvent, newStart: string, newEnd: string) => void;
+  /** Callback when the view type changes */
+  onViewChange?: (viewType: ViewType) => void;
+  /** Callback when navigating to a different date */
+  onDateChange?: (date: string) => void;
+}
+
+/**
+ * Internal resolved configuration with all defaults applied
+ */
+export interface ResolvedCalendarConfig {
+  view: Required<ViewConfig>;
+  draggable: Required<DraggableConfig>;
+  theme: Required<ThemeConfig> & { fontSize: Required<NonNullable<ThemeConfig['fontSize']>> };
+  onEventClick?: (event: CalendarEvent) => void;
+  onEventDrop?: (event: CalendarEvent, newStart: string, newEnd: string) => void;
+  onViewChange?: (viewType: ViewType) => void;
+  onDateChange?: (date: string) => void;
+}
+
+// =============================================================================
+// Date Adapter Types
+// =============================================================================
+
+/**
+ * Time unit for date operations
+ */
+export type TimeUnit = 'year' | 'month' | 'week' | 'day' | 'hour' | 'minute';
+
+/**
+ * Abstract date adapter interface for pluggable date libraries
+ */
+export interface DateAdapter<T> {
+  // Creation
+  /** Create a date from various inputs */
+  create(date?: string | Date | T): T;
+  /** Parse a date string with optional format */
+  parse(dateStr: string, format?: string): T;
+  /** Format a date to string */
+  format(date: T, format: string): string;
+
+  // Getters
+  /** Get year */
+  year(date: T): number;
+  /** Get month (0-11) */
+  month(date: T): number;
+  /** Get day of month (1-31) */
+  date(date: T): number;
+  /** Get day of week (0-6, Sunday = 0) */
+  day(date: T): number;
+  /** Get hour (0-23) */
+  hour(date: T): number;
+  /** Get minute (0-59) */
+  minute(date: T): number;
+
+  // Setters
+  /** Set hour and return new date */
+  setHour(date: T, hour: number): T;
+  /** Set minute and return new date */
+  setMinute(date: T, minute: number): T;
+
+  // Calculations
+  /** Add time to date */
+  add(date: T, amount: number, unit: TimeUnit): T;
+  /** Calculate difference between dates */
+  diff(date1: T, date2: T, unit: TimeUnit): number;
+
+  // Boundaries
+  /** Get start of time unit */
+  startOf(date: T, unit: TimeUnit): T;
+  /** Get end of time unit */
+  endOf(date: T, unit: TimeUnit): T;
+
+  // Comparisons
+  /** Check if date1 is before date2 */
+  isBefore(date1: T, date2: T, unit?: TimeUnit): boolean;
+  /** Check if date1 is after date2 */
+  isAfter(date1: T, date2: T, unit?: TimeUnit): boolean;
+  /** Check if dates are the same */
+  isSame(date1: T, date2: T, unit?: TimeUnit): boolean;
+}
