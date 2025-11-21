@@ -385,10 +385,11 @@ export class Calendar<T = Dayjs> {
   }
 
   private getHeaderTitle(): string {
-    if (this.currentView === "day") {
-      return this.adapter.format(this.currentDate, "YYYY年M月D日");
-    }
-    return this.adapter.format(this.currentDate, "YYYY年 M月");
+    const format =
+      this.currentView === "day"
+        ? this.config.headerFormat.day
+        : this.config.headerFormat.month;
+    return this.adapter.format(this.currentDate, format);
   }
 
   private getNavigationUnit(): "month" | "week" | "day" {
@@ -435,6 +436,10 @@ export class Calendar<T = Dayjs> {
         },
       },
       showEventCounts: config.showEventCounts ?? false,
+      headerFormat: {
+        month: config.headerFormat?.month || "YYYY年 M月",
+        day: config.headerFormat?.day || "YYYY年M月D日",
+      },
     };
 
     if (config.onEventClick) resolved.onEventClick = config.onEventClick;
