@@ -160,6 +160,49 @@ export interface ThemeConfig {
 }
 
 // =============================================================================
+// Date Format Types
+// =============================================================================
+
+/**
+ * Configuration for date format strings used throughout the calendar
+ * Format tokens depend on the dateAdapter being used (Day.js, date-fns, or Native)
+ *
+ * @example Day.js tokens
+ * ```typescript
+ * {
+ *   date: 'YYYY-MM-DD',
+ *   dateTime: 'YYYY-MM-DD HH:mm',
+ *   time: 'HH:mm',
+ *   monthHeader: 'YYYY年 M月',
+ *   dayHeader: 'YYYY年M月D日'
+ * }
+ * ```
+ *
+ * @example date-fns tokens
+ * ```typescript
+ * {
+ *   date: 'yyyy-MM-dd',
+ *   dateTime: 'yyyy-MM-dd HH:mm',
+ *   time: 'HH:mm',
+ *   monthHeader: 'yyyy年 M月',
+ *   dayHeader: 'yyyy年M月d日'
+ * }
+ * ```
+ */
+export interface DateFormatConfig {
+  /** Date format (default: 'YYYY-MM-DD' for Day.js, 'yyyy-MM-dd' for date-fns) */
+  date: string;
+  /** Date-time format (default: 'YYYY-MM-DD HH:mm' for Day.js, 'yyyy-MM-dd HH:mm' for date-fns) */
+  dateTime: string;
+  /** Time format (default: 'HH:mm') */
+  time: string;
+  /** Month view header format (default: 'YYYY年 M月' for Day.js, 'yyyy年 M月' for date-fns) */
+  monthHeader: string;
+  /** Day view header format (default: 'YYYY年M月D日' for Day.js, 'yyyy年M月d日' for date-fns) */
+  dayHeader: string;
+}
+
+// =============================================================================
 // Layout Types
 // =============================================================================
 
@@ -244,7 +287,14 @@ export interface CalendarConfig {
   /** Show event count badges on date cells in month view (default: false) */
   showEventCounts?: boolean;
   /**
-   * Custom header title format strings
+   * Date format strings configuration
+   * Allows full customization of all date/time formats used internally
+   * Format tokens depend on the dateAdapter being used
+   */
+  dateFormats?: Partial<DateFormatConfig>;
+  /**
+   * Custom header title format strings (deprecated, use dateFormats instead)
+   * @deprecated Use dateFormats.monthHeader and dateFormats.dayHeader instead
    * Default uses Day.js tokens: { month: 'YYYY年 M月', day: 'YYYY年M月D日' }
    * Note: Format tokens depend on the dateAdapter being used (Day.js vs date-fns)
    */
@@ -282,6 +332,7 @@ export interface ResolvedCalendarConfig {
     fontSize: Required<NonNullable<ThemeConfig["fontSize"]>>;
   };
   showEventCounts: boolean;
+  dateFormats: Required<DateFormatConfig>;
   headerFormat: {
     month: string;
     day: string;

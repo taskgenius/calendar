@@ -8,6 +8,7 @@ import type {
   TimeLayoutItem,
   TimeColumn,
   ViewType,
+  DateFormatConfig,
 } from "../types";
 
 /**
@@ -35,12 +36,14 @@ export class TimeEngine<T> {
    * @param cellHeight - Height of each hour cell in pixels (default: 60)
    * @param showWeekends - Whether to show weekend columns (default: true)
    * @param firstDayOfWeek - First day of week: 0 = Sunday, 1 = Monday (default: 0)
+   * @param dateFormats - Date format configuration
    */
   constructor(
     private adapter: DateAdapter<T>,
     cellHeight: number = 60,
     private showWeekends: boolean = true,
     private firstDayOfWeek: number = 0,
+    private dateFormats: Required<DateFormatConfig>,
   ) {
     this.cellHeight = cellHeight;
   }
@@ -59,7 +62,7 @@ export class TimeEngine<T> {
     if (viewType === "day") {
       columns.push({
         date: currentDate,
-        dateStr: this.adapter.format(currentDate, "YYYY-MM-DD"),
+        dateStr: this.adapter.format(currentDate, this.dateFormats.date),
       });
     } else {
       // Week view - generate columns starting from configured first day of week
@@ -87,7 +90,7 @@ export class TimeEngine<T> {
         if (this.showWeekends || !isWeekend) {
           columns.push({
             date: curr,
-            dateStr: this.adapter.format(curr, "YYYY-MM-DD"),
+            dateStr: this.adapter.format(curr, this.dateFormats.date),
           });
         }
 
@@ -181,7 +184,7 @@ export class TimeEngine<T> {
 
     for (const event of events) {
       const start = this.adapter.parse(event.start);
-      const startDateStr = this.adapter.format(start, "YYYY-MM-DD");
+      const startDateStr = this.adapter.format(start, this.dateFormats.date);
 
       // Only include single-day events on this date
       if (startDateStr !== dateStr || !this.isSingleDayEvent(event)) {

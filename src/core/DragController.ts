@@ -7,6 +7,7 @@ import type {
   DraggableConfig,
   DragState,
   DragMode,
+  DateFormatConfig,
 } from "../types";
 import { createElement, setStyles, querySelectorAll } from "../utils/dom";
 
@@ -28,6 +29,7 @@ export class DragController<T> {
       newEnd: string,
     ) => void,
     private cellHeight: number = 60,
+    private dateFormats: Required<DateFormatConfig>,
   ) {
     this.boundOnMove = this.onMove.bind(this);
     this.boundOnUp = this.onUp.bind(this);
@@ -377,7 +379,7 @@ export class DragController<T> {
     // Remove existing ghosts
     querySelectorAll(".tg-ghost-event").forEach((el) => el.remove());
 
-    const dateStr = this.adapter.format(start, "YYYY-MM-DD");
+    const dateStr = this.adapter.format(start, this.dateFormats.date);
     const col = document.querySelector(
       `.tg-day-column[data-date="${dateStr}"]`,
     ) as HTMLElement | null;
@@ -397,7 +399,7 @@ export class DragController<T> {
       left: "5%",
     });
 
-    ghost.textContent = `${this.adapter.format(start, "HH:mm")} - ${this.adapter.format(end, "HH:mm")}`;
+    ghost.textContent = `${this.adapter.format(start, this.dateFormats.time)} - ${this.adapter.format(end, this.dateFormats.time)}`;
     setStyles(ghost, {
       color: "#3b82f6",
       fontSize: "10px",
@@ -428,9 +430,12 @@ export class DragController<T> {
     if (s.tentativeStart && s.tentativeEnd) {
       const newStart = this.adapter.format(
         s.tentativeStart,
-        "YYYY-MM-DD HH:mm",
+        this.dateFormats.dateTime,
       );
-      const newEnd = this.adapter.format(s.tentativeEnd, "YYYY-MM-DD HH:mm");
+      const newEnd = this.adapter.format(
+        s.tentativeEnd,
+        this.dateFormats.dateTime,
+      );
 
       this.onDrop(s.event, newStart, newEnd);
       s.renderCallback();

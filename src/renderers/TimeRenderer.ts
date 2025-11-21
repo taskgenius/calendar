@@ -7,6 +7,7 @@ import type {
   ThemeConfig,
   ViewType,
   TimeLayoutItem,
+  DateFormatConfig,
 } from "../types";
 import type { TimeEngine } from "../engines/TimeEngine";
 import type { DragController } from "../core/DragController";
@@ -22,6 +23,7 @@ export class TimeRenderer<T> {
     private theme: Required<ThemeConfig> & {
       fontSize: Required<NonNullable<ThemeConfig["fontSize"]>>;
     },
+    private dateFormats: Required<DateFormatConfig>,
     private onStyleEvent?: (
       event: CalendarEvent,
     ) => import("../types").EventStyle,
@@ -202,8 +204,8 @@ export class TimeRenderer<T> {
     // Format times
     const startDate = this.adapter.parse(item.event.start);
     const endDate = this.adapter.parse(item.event.end);
-    const startTime = this.adapter.format(startDate, "HH:mm");
-    const endTime = this.adapter.format(endDate, "HH:mm");
+    const startTime = this.adapter.format(startDate, this.dateFormats.time);
+    const endTime = this.adapter.format(endDate, this.dateFormats.time);
 
     // Create content
     const timeText = createElement("div", "tg-time-text");

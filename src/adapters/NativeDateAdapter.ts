@@ -16,36 +16,44 @@ export class NativeDateAdapter implements DateAdapter<Date> {
   }
 
   parse(dateStr: string, _format?: string): Date {
-    // For simplicity, we support ISO format: YYYY-MM-DD HH:mm
+    // Support ISO format with - or / separators: YYYY-MM-DD, YYYY/MM/DD, etc.
     // Format parameter is ignored as native Date is limited
-    if (dateStr.includes(" ")) {
+
+    // Normalize separators to - for consistent parsing
+    const normalized = dateStr.replace(/\//g, "-");
+
+    if (normalized.includes(" ")) {
       // Has time component
-      const [datePart, timePart] = dateStr.split(" ");
+      const [datePart, timePart] = normalized.split(" ");
       const [year, month, day] = datePart!.split("-").map(Number);
       const [hour, minute] = timePart!.split(":").map(Number);
       return new Date(year!, month! - 1, day, hour, minute);
     }
     // Date only
-    const [year, month, day] = dateStr.split("-").map(Number);
+    const [year, month, day] = normalized.split("-").map(Number);
     return new Date(year!, month! - 1, day!);
   }
 
   format(date: Date, format: string): string {
     const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
+    const monthNum = date.getMonth() + 1;
+    const dayNum = date.getDate();
+    const month = String(monthNum).padStart(2, "0");
+    const day = String(dayNum).padStart(2, "0");
     const hour = String(date.getHours()).padStart(2, "0");
     const minute = String(date.getMinutes()).padStart(2, "0");
     const second = String(date.getSeconds()).padStart(2, "0");
 
-    // Simple format replacement
+    // Support both Day.js (YYYY, DD, D, M) and date-fns (yyyy, dd, d) tokens
     return format
-      .replace("YYYY", String(year))
-      .replace("MM", month)
-      .replace("DD", day)
-      .replace("HH", hour)
-      .replace("mm", minute)
-      .replace("ss", second);
+      .replace(/YYYY|yyyy/g, String(year))
+      .replace(/MM/g, month)
+      .replace(/\bM\b/g, String(monthNum)) // Single M without padding
+      .replace(/DD|dd/g, day)
+      .replace(/\bD\b|\bd\b/g, String(dayNum)) // Single D/d without padding
+      .replace(/HH/g, hour)
+      .replace(/mm/g, minute)
+      .replace(/ss/g, second);
   }
 
   // =============================================================================

@@ -18,6 +18,7 @@ import { DragController } from "./DragController";
 import { EventManager } from "./EventManager";
 import { applyThemeVariables } from "../styles";
 import { createElement, clearElement } from "../utils/dom";
+import { DEFAULT_DATE_FORMATS, INTERNAL_DATA_FORMAT } from "../constants";
 
 /**
  * TaskGenius Calendar Component
@@ -89,6 +90,7 @@ export class Calendar<T = Dayjs> {
       this.config.draggable,
       this.handleEventDrop.bind(this),
       this.config.theme.cellHeight,
+      this.config.dateFormats,
     );
 
     // 6. Initialize engines
@@ -96,12 +98,14 @@ export class Calendar<T = Dayjs> {
       this.adapter,
       this.config.view.firstDayOfWeek,
       this.config.view.showWeekends,
+      this.config.dateFormats,
     );
     this.timeEngine = new TimeEngine<T>(
       this.adapter,
       this.config.theme.cellHeight,
       this.config.view.showWeekends,
       this.config.view.firstDayOfWeek,
+      this.config.dateFormats,
     );
 
     // 7. Initialize renderers
@@ -110,6 +114,7 @@ export class Calendar<T = Dayjs> {
       this.adapter,
       this.config.theme,
       this.config.showEventCounts,
+      this.config.dateFormats,
       this.config.onRenderDateCell,
       this.config.onStyleEvent,
     );
@@ -117,6 +122,7 @@ export class Calendar<T = Dayjs> {
       this.timeEngine,
       this.adapter,
       this.config.theme,
+      this.config.dateFormats,
       this.config.onStyleEvent,
     );
 
@@ -200,8 +206,9 @@ export class Calendar<T = Dayjs> {
   next(): void {
     const unit = this.getNavigationUnit();
     this.currentDate = this.adapter.add(this.currentDate, 1, unit);
+    // Use ISO format for external API (backward compatibility & reliability)
     this.config.onDateChange?.(
-      this.adapter.format(this.currentDate, "YYYY-MM-DD"),
+      this.adapter.format(this.currentDate, INTERNAL_DATA_FORMAT.date),
     );
     this.render();
   }
@@ -212,8 +219,9 @@ export class Calendar<T = Dayjs> {
   prev(): void {
     const unit = this.getNavigationUnit();
     this.currentDate = this.adapter.add(this.currentDate, -1, unit);
+    // Use ISO format for external API (backward compatibility & reliability)
     this.config.onDateChange?.(
-      this.adapter.format(this.currentDate, "YYYY-MM-DD"),
+      this.adapter.format(this.currentDate, INTERNAL_DATA_FORMAT.date),
     );
     this.render();
   }
@@ -223,8 +231,9 @@ export class Calendar<T = Dayjs> {
    */
   today(): void {
     this.currentDate = this.adapter.create();
+    // Use ISO format for external API (backward compatibility & reliability)
     this.config.onDateChange?.(
-      this.adapter.format(this.currentDate, "YYYY-MM-DD"),
+      this.adapter.format(this.currentDate, INTERNAL_DATA_FORMAT.date),
     );
     this.render();
   }
@@ -236,17 +245,23 @@ export class Calendar<T = Dayjs> {
    */
   goToDate(date: string | Date): void {
     this.currentDate = this.adapter.create(date);
+    // Use ISO format for external API (backward compatibility & reliability)
     this.config.onDateChange?.(
-      this.adapter.format(this.currentDate, "YYYY-MM-DD"),
+      this.adapter.format(this.currentDate, INTERNAL_DATA_FORMAT.date),
     );
     this.render();
   }
 
   /**
-   * Get the current date
+   * Get the current date in ISO format
+   *
+   * @returns Date string in YYYY-MM-DD format (ISO 8601)
+   *
+   * Note: This method intentionally returns ISO format regardless of
+   * dateFormats configuration to ensure API stability and reliability
    */
   getCurrentDate(): string {
-    return this.adapter.format(this.currentDate, "YYYY-MM-DD");
+    return this.adapter.format(this.currentDate, INTERNAL_DATA_FORMAT.date);
   }
 
   /**
@@ -413,6 +428,22 @@ export class Calendar<T = Dayjs> {
   }
 
   private mergeConfig(config: CalendarConfig): ResolvedCalendarConfig {
+    // Merge dateFormats with defaults
+    // Support backward compatibility: headerFormat takes precedence over dateFormats defaults
+    const dateFormats = {
+      date: config.dateFormats?.date || DEFAULT_DATE_FORMATS.date,
+      dateTime: config.dateFormats?.dateTime || DEFAULT_DATE_FORMATS.dateTime,
+      time: config.dateFormats?.time || DEFAULT_DATE_FORMATS.time,
+      monthHeader:
+        config.dateFormats?.monthHeader ||
+        config.headerFormat?.month ||
+        DEFAULT_DATE_FORMATS.monthHeader,
+      dayHeader:
+        config.dateFormats?.dayHeader ||
+        config.headerFormat?.day ||
+        DEFAULT_DATE_FORMATS.dayHeader,
+    };
+
     const resolved: ResolvedCalendarConfig = {
       view: {
         type: config.view?.type || "week",
@@ -436,9 +467,10 @@ export class Calendar<T = Dayjs> {
         },
       },
       showEventCounts: config.showEventCounts ?? false,
+      dateFormats,
       headerFormat: {
-        month: config.headerFormat?.month || "YYYY年 M月",
-        day: config.headerFormat?.day || "YYYY年M月D日",
+        month: dateFormats.monthHeader,
+        day: dateFormats.dayHeader,
       },
     };
 

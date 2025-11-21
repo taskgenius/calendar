@@ -7,6 +7,88 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2025-11-21
+
+### ✨ Features
+
+- **Comprehensive Date Format Configuration**: Add `dateFormats` configuration option for complete control over all date/time formats
+  - `dateFormats.date`: Date format for internal rendering (default: "YYYY-MM-DD")
+  - `dateFormats.dateTime`: Date-time format for events (default: "YYYY-MM-DD HH:mm")
+  - `dateFormats.time`: Time format for time displays (default: "HH:mm")
+  - `dateFormats.monthHeader`: Month view header format (default: "YYYY年 M月")
+  - `dateFormats.dayHeader`: Day view header format (default: "YYYY年M月D日")
+  - Supports Day.js (`YYYY`, `DD`) and date-fns (`yyyy`, `dd`) format tokens
+  - Display formats are fully customizable while maintaining stable ISO format for APIs
+
+### 🏗️ Architecture
+
+- **Separation of Concerns**: Clear distinction between data formats (ISO 8601) and display formats (user-configurable)
+  - Public APIs (`getCurrentDate`, `onDateChange`, `onEventDrop`) always use ISO format for reliability and backward compatibility
+  - UI rendering uses configurable `dateFormats` for flexible display
+  - Internal data exchange uses `INTERNAL_DATA_FORMAT` constant (ISO 8601)
+
+### 🔧 Improvements
+
+- **NativeDateAdapter Enhancement**: Add support for multiple date separators
+  - Now supports both `/` (e.g., "2025/11/20") and `-` (e.g., "2025-11-20") separators
+  - Automatic normalization for consistent parsing
+  - Better compatibility with custom format configurations
+
+- **MonthRenderer Reliability**: Improve date cell rendering hook
+  - Use adapter API directly instead of string parsing for `onRenderDateCell` context
+  - Eliminates Invalid Date issues with custom format tokens
+  - More reliable across different date adapters
+
+### 🐛 Bug Fixes
+
+- Remove all hard-coded format strings from internal components
+  - Calendar navigation methods now use format constants
+  - Engines and renderers use configurable formats
+  - Drag controller uses configurable formats
+
+### 📚 Documentation
+
+- Add comprehensive inline documentation for format configuration
+  - Clear explanation of data format vs. display format separation
+  - Design rationale documented in constants
+  - JSDoc comments for all format-related APIs
+
+### 🧪 Testing
+
+- Add 19 new tests for custom format scenarios (175 total tests, 100% pass rate)
+  - `NativeDateAdapter.customFormat.test.ts`: 12 tests for adapter format handling
+  - `Calendar.customFormats.test.ts`: 7 integration tests for custom format configurations
+  - Tests cover slash/dash separators, round-trip consistency, and API stability
+
+### ⚠️ Deprecation Notice
+
+- `headerFormat` configuration is now deprecated (still supported for backward compatibility)
+  - Use `dateFormats.monthHeader` and `dateFormats.dayHeader` instead
+  - Old configurations will continue to work but are mapped internally to the new system
+
+### 🔄 Migration Guide
+
+```typescript
+// Before (deprecated but still works)
+new Calendar('#app', {
+  headerFormat: {
+    month: 'YYYY年 M月',
+    day: 'YYYY年M月D日'
+  }
+});
+
+// After (recommended)
+new Calendar('#app', {
+  dateFormats: {
+    monthHeader: 'YYYY年 M月',
+    dayHeader: 'YYYY年M月D日',
+    // Optionally customize other formats
+    date: 'YYYY/MM/DD',
+    time: 'HH:mm'
+  }
+});
+```
+
 ## [0.3.0] - 2025-11-21
 
 ### ✨ Features

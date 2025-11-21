@@ -7,6 +7,7 @@ import type {
   CalendarEvent,
   MonthLayoutItem,
   GridCell,
+  DateFormatConfig,
 } from "../types";
 
 /**
@@ -17,6 +18,7 @@ export class MonthEngine<T> {
     private adapter: DateAdapter<T>,
     private firstDayOfWeek: number = 0,
     private showWeekends: boolean = true,
+    private dateFormats: Required<DateFormatConfig>,
   ) {}
 
   /**
@@ -76,7 +78,7 @@ export class MonthEngine<T> {
         if (this.showWeekends || !isWeekend) {
           days.push({
             date: curr,
-            dateStr: this.adapter.format(curr, "YYYY-MM-DD"),
+            dateStr: this.adapter.format(curr, this.dateFormats.date),
           });
         }
 

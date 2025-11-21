@@ -6,6 +6,7 @@ import type {
   CalendarEvent,
   ThemeConfig,
   MonthLayoutItem,
+  DateFormatConfig,
 } from "../types";
 import type { MonthEngine } from "../engines/MonthEngine";
 import type { DragController } from "../core/DragController";
@@ -22,6 +23,10 @@ export class MonthRenderer<T> {
       fontSize: Required<NonNullable<ThemeConfig["fontSize"]>>;
     },
     private showEventCounts: boolean = false,
+    // dateFormats parameter kept for API consistency with other renderers
+    // Currently unused as formats are handled by engines/adapters
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _dateFormats: Required<DateFormatConfig>,
     private onRenderDateCell?: (
       ctx: import("../types").DateCellContext,
     ) => void,
@@ -209,8 +214,12 @@ export class MonthRenderer<T> {
 
     // Call custom render hook if provided
     if (this.onRenderDateCell) {
-      // Convert T to Date for the context
-      const dateObj = new Date(this.adapter.format(day.date, "YYYY-MM-DD"));
+      // Convert T to Date using adapter API (avoids format string parsing issues)
+      const dateObj = new Date(
+        this.adapter.year(day.date),
+        this.adapter.month(day.date),
+        this.adapter.date(day.date),
+      );
       this.onRenderDateCell({
         date: dateObj,
         events: dayEvents,
