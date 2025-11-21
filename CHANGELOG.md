@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2025-11-21
+
+### ✨ Features
+
+- **Custom Header Format**: Add `headerFormat` configuration option to customize calendar header title formats for month and day views
+  - `headerFormat.month`: Custom format for month/week view headers (default: "YYYY年 M月")
+  - `headerFormat.day`: Custom format for day view headers (default: "YYYY年M月D日")
+  - Format tokens depend on the date adapter being used (Day.js, date-fns, or native)
+
+### 🧪 Testing
+
+- Add comprehensive tests for header format configuration
+- Add tests for partial configuration support
+- Code style improvements (consistent quote formatting)
+
 ## [0.2.1] - 2025-11-20
 
 ### 🐛 Bug Fixes
@@ -68,7 +83,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Lightweight (<12KB gzipped)
 - SOLID architecture
 
-[Unreleased]: https://github.com/taskgenius/calendar/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/taskgenius/calendar/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/taskgenius/calendar/compare/v0.2.1...v0.3.0
+[0.2.1]: https://github.com/taskgenius/calendar/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/taskgenius/calendar/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/taskgenius/calendar/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/taskgenius/calendar/releases/tag/v0.1.0
