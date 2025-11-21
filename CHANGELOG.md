@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2025-11-21
+
+### ⚠️ Breaking Changes
+
+- **CSS file is now required**: The component no longer uses inline styles. You must import `@taskgenius/calendar/styles.css` for the calendar to render correctly.
+
+### 🏗️ Refactoring
+
+- **Extract inline styles to CSS**: Moved all inline styles from TypeScript to external CSS file
+  - Main container layout styles moved from `Calendar.ts` to `.tg-calendar` class
+  - View container styles moved to `.tg-view-container` class
+  - Event count badge styles moved to `.tg-event-count-badge` class
+- **CSS code formatting**: Standardized indentation and formatting in `styles.css`
+
+### 📚 Documentation
+
+- Updated README to clarify that CSS import is required (not optional)
+- Added CSS examples for custom element styling (`onRenderDateCell` hook)
+- Improved style customization documentation
+
 ## [0.4.0] - 2025-11-21
 
 ### ✨ Features
@@ -165,7 +185,9 @@ new Calendar('#app', {
 - Lightweight (<12KB gzipped)
 - SOLID architecture
 
-[Unreleased]: https://github.com/taskgenius/calendar/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/taskgenius/calendar/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/taskgenius/calendar/compare/v0.4.0...v0.5.0
+[0.4.0]: https://github.com/taskgenius/calendar/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/taskgenius/calendar/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/taskgenius/calendar/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/taskgenius/calendar/compare/v0.1.1...v0.2.0

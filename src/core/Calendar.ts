@@ -296,28 +296,17 @@ export class Calendar<T = Dayjs> {
     clearElement(this.container);
 
     // Create main container
+    // Layout styles applied via CSS class .tg-calendar
     const mainContainer = createElement("div", "tg-calendar");
     this.applyTheme(mainContainer);
-    mainContainer.style.cssText = `
-      width: 100%;
-      max-width: 1200px;
-      background: white;
-      border-radius: 12px;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-      border: 1px solid #e5e7eb;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-      max-height: 90vh;
-    `;
 
     // Render header
     const header = this.renderHeader();
     mainContainer.appendChild(header);
 
     // Render view body
+    // Layout styles applied via CSS class .tg-view-container
     const viewBody = createElement("div", "tg-view-container");
-    viewBody.style.cssText = "flex: 1; overflow: hidden; position: relative;";
 
     const renderCallback = () => this.render();
 

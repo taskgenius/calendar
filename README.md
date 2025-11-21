@@ -33,7 +33,7 @@ npm install @taskgenius/calendar dayjs
 
 ```typescript
 import { Calendar } from '@taskgenius/calendar';
-import '@taskgenius/calendar/styles.css'; // Manually include default styles
+import '@taskgenius/calendar/styles.css'; // ⚠️ Required - component uses CSS classes
 
 // Method 1: Pass CSS selector string
 const calendar = new Calendar('#app', {
@@ -64,9 +64,15 @@ const calendar2 = new Calendar(container, {
 
 ## 🎨 Styles
 
-- Default styles are no longer injected automatically. Import `@taskgenius/calendar/styles.css` in your app entry, or reference `<link rel="stylesheet" href="/node_modules/@taskgenius/calendar/dist/styles.css">`.
+**⚠️ Important**: The component **requires** `@taskgenius/calendar/styles.css` to render correctly. Since v0.4.0, all layout and styling use external CSS classes instead of inline styles.
+
+**Import options**:
+- **ES modules**: `import '@taskgenius/calendar/styles.css';` (recommended)
+- **HTML link**: `<link rel="stylesheet" href="/node_modules/@taskgenius/calendar/dist/styles.css">`
+
+**Customization**:
 - Theme settings are delivered via CSS variables: `--tg-primary-color`, `--tg-primary-rgb`, `--tg-cell-height`, `--tg-font-header`, `--tg-font-event`. The library sets these on the `.tg-calendar` root; you can override them in your own styles.
-- To fully customize the look, skip the default CSS and style using the exposed `tg-*` class names.
+- To fully customize the look, you can override the default CSS or provide your own styles using the exposed `tg-*` class names.
 
 ## 📖 API Reference
 
@@ -186,7 +192,7 @@ interface CalendarEvent {
 
 ```typescript
 import { Calendar } from '@taskgenius/calendar';
-import '@taskgenius/calendar/styles.css';
+import '@taskgenius/calendar/styles.css'; // ⚠️ Required
 
 // Initialize with CSS selector
 const calendar = new Calendar('#calendar-container');
@@ -301,7 +307,6 @@ const calendar = new Calendar('#app', {
       const badge = document.createElement('div');
       badge.className = 'overdue-badge';
       badge.textContent = '!';
-      badge.style.cssText = 'position: absolute; top: 2px; right: 2px; background: #ef4444; color: white; border-radius: 50%; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; font-size: 10px;';
       ctx.cellEl.appendChild(badge);
     }
     
@@ -311,6 +316,32 @@ const calendar = new Calendar('#app', {
     }
   }
 });
+```
+
+Add corresponding CSS for custom elements:
+
+```css
+/* Style custom overdue badge */
+.overdue-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  background: #ef4444;
+  color: white;
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+/* Style weekend cells */
+.weekend {
+  background-color: #fef3c7;
+}
 ```
 
 ### Custom Event Styling
@@ -329,6 +360,15 @@ const calendar = new Calendar('#app', {
     };
   }
 });
+```
+
+Add CSS for custom event classes (optional):
+
+```css
+/* Additional styling for completed events */
+.completed-event {
+  text-decoration: line-through;
+}
 ```
 
 ## 🏗️ Architecture

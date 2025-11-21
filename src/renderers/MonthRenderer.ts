@@ -19,7 +19,10 @@ export class MonthRenderer<T> {
   constructor(
     private engine: MonthEngine<T>,
     private adapter: DateAdapter<T>,
-    private theme: Required<ThemeConfig> & {
+    // theme parameter kept for API consistency
+    // Theme values now applied via CSS variables (--tg-primary-color, etc.)
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _theme: Required<ThemeConfig> & {
       fontSize: Required<NonNullable<ThemeConfig["fontSize"]>>;
     },
     private showEventCounts: boolean = false,
@@ -193,22 +196,10 @@ export class MonthRenderer<T> {
     });
 
     // Show event count badge if enabled
+    // Styles applied via CSS class, theme color via CSS variable --tg-primary-color
     if (this.showEventCounts && dayEvents.length > 0) {
       const badge = createElement("div", "tg-event-count-badge");
       badge.textContent = dayEvents.length.toString();
-      badge.style.cssText = `
-        position: absolute;
-        bottom: 2px;
-        right: 2px;
-        background: ${this.theme.primaryColor};
-        color: white;
-        border-radius: 10px;
-        padding: 2px 6px;
-        font-size: 10px;
-        font-weight: bold;
-        min-width: 18px;
-        text-align: center;
-      `;
       cell.appendChild(badge);
     }
 
