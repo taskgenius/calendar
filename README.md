@@ -528,15 +528,6 @@ interface DateAdapter<T> {
 
 MIT ©TaskGenius
 
-## 📦 Publishing
-
-This package uses npm Trusted Publishing for secure, automated releases. See the [Publishing Guide](docs/PUBLISHING.md) for details on:
-
-- Creating new releases
-- Version management
-- Trusted Publishing configuration
-- Troubleshooting
-
 ## 🤝 Contributing
 
 Contributions are welcome! Please read the contributing guidelines before submitting a PR.
