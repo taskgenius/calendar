@@ -94,6 +94,24 @@ describe("MonthEngine", () => {
       expect(layout[0]!.span).toBe(3); // Mon-Wed
     });
 
+    it("should include truncated partial days in span calculation", () => {
+      const events: CalendarEvent[] = [
+        {
+          id: "span-normalized",
+          title: "Partial day edges",
+          start: "2025-11-17 18:00",
+          end: "2025-11-19 09:00",
+          color: "#f97316",
+        },
+      ];
+
+      const layout = engine.calculateLayout(events, weekStart, weekEnd);
+
+      expect(layout).toHaveLength(1);
+      expect(layout[0]!.startIdx).toBe(1);
+      expect(layout[0]!.span).toBe(3); // Mon-Wed even with partial times
+    });
+
     it("should allocate different slots for overlapping events", () => {
       const events: CalendarEvent[] = [
         {

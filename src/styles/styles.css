@@ -204,11 +204,20 @@
 
 /* Vertical resize handle (time view) */
 .tg-resize-v {
-    bottom: 0;
     left: 0;
     right: 0;
     height: 8px;
     cursor: row-resize;
+}
+
+.tg-resize-v.tg-top {
+    top: 0;
+    bottom: auto;
+}
+
+.tg-resize-v.tg-bottom {
+    bottom: 0;
+    top: auto;
 }
 
 /* Ghost element for drag preview */
@@ -424,4 +433,28 @@
     border-right: 3px solid rgba(var(--tg-primary-rgb), 0.5);
     pointer-events: none;
     box-sizing: border-box;
+}
+
+/* ============================================================================
+   Filter-specific Styles
+   ========================================================================= */
+
+/* Disabled day cells (when dayFilter returns { disabled: true }) */
+.tg-month-cell.tg-disabled,
+.tg-time-header-cell.tg-disabled {
+    opacity: 0.5;
+    pointer-events: none;
+    background-color: #f9fafb;
+    cursor: not-allowed;
+}
+
+.tg-month-cell.tg-disabled .tg-date-number {
+    color: #9ca3af;
+    text-decoration: line-through;
+}
+
+/* Custom time slot labels (via timeFilter config.className) */
+.tg-time-axis-label.custom {
+    /* Placeholder for user customization */
+    font-weight: bold;
 }

@@ -34,6 +34,64 @@ export interface CalendarEvent {
 export type ViewType = "month" | "week" | "day";
 
 /**
+ * Context information provided to day filter function
+ */
+export interface DayFilterContext {
+  /** Whether this day is a weekend (Saturday or Sunday) */
+  isWeekend: boolean;
+  /** Day of week (0-6, where 0 = Sunday) */
+  dayOfWeek: number;
+  /** Whether this day is today */
+  isToday: boolean;
+  /** Whether this day belongs to the current month (only meaningful in month view) */
+  isThisMonth: boolean;
+}
+
+/**
+ * Advanced configuration for day rendering (returned by day filter)
+ */
+export interface DayRenderConfig {
+  /** Whether to display this day */
+  visible: boolean;
+  /** Additional CSS class name to apply */
+  className?: string;
+  /** Inline styles to apply */
+  style?: Partial<CSSStyleDeclaration>;
+  /** Whether to disable interactions on this day */
+  disabled?: boolean;
+}
+
+/**
+ * Configuration for time slot rendering (returned by time filter)
+ */
+export interface TimeSlotConfig {
+  /** Whether to display this time slot */
+  visible: boolean;
+  /** Custom label text for this time slot */
+  label?: string;
+  /** Additional CSS class name to apply */
+  className?: string;
+}
+
+/**
+ * Function type for formatting time labels
+ * @param hour - Hour value (0-23)
+ * @param minute - Minute value (default: 0)
+ * @returns Formatted time string
+ */
+export type TimeFormatter = (hour: number, minute?: number) => string;
+
+/**
+ * Return type for day filter function (boolean for simple cases, config object for advanced)
+ */
+export type DayFilterResult = boolean | DayRenderConfig;
+
+/**
+ * Return type for time filter function (boolean for simple cases, config object for advanced)
+ */
+export type TimeFilterResult = boolean | TimeSlotConfig;
+
+/**
  * Configuration for calendar view
  */
 export interface ViewConfig {
@@ -45,8 +103,64 @@ export interface ViewConfig {
   showWeekNumbers?: boolean;
   /** First day of week: 0 = Sunday, 1 = Monday, 6 = Saturday (default: 0) */
   firstDayOfWeek?: 0 | 1 | 6;
-  /** Show weekends (Saturday and Sunday) (default: true) */
+  /** Show weekends (Saturday and Sunday) (default: true). Note: dayFilter takes precedence if provided. */
   showWeekends?: boolean;
+  /**
+   * Day filter function (applies to all views)
+   * Controls which days are rendered and how they appear
+   * @param date - The date to filter (type depends on date adapter)
+   * @param context - Context information about the day
+   * @returns boolean (true = show, false = hide) or DayRenderConfig for advanced customization
+   * @example
+   * ```typescript
+   * // Simple: hide weekends
+   * dayFilter: (date, ctx) => !ctx.isWeekend
+   *
+   * // Advanced: customize holiday appearance
+   * dayFilter: (date, ctx) => {
+   *   if (isHoliday(date)) {
+   *     return { visible: true, className: 'holiday', disabled: true };
+   *   }
+   *   return true;
+   * }
+   * ```
+   */
+  dayFilter?: (date: unknown, context: DayFilterContext) => DayFilterResult;
+  /**
+   * Time slot filter function (only applies to week/day views)
+   * Controls which hour slots are displayed on the time axis
+   * @param hour - Hour value (0-23)
+   * @returns boolean (true = show, false = hide) or TimeSlotConfig for advanced customization
+   * @example
+   * ```typescript
+   * // Simple: show only working hours (8:00-18:00)
+   * timeFilter: (hour) => hour >= 8 && hour < 18
+   *
+   * // Advanced: customize specific hours
+   * timeFilter: (hour) => {
+   *   if (hour === 12) return { visible: true, label: 'Lunch', className: 'lunch-hour' };
+   *   return hour >= 8 && hour < 18;
+   * }
+   * ```
+   */
+  timeFilter?: (hour: number) => TimeFilterResult;
+  /**
+   * Time formatter function (only applies to week/day views)
+   * Customizes how time labels are displayed on the time axis
+   * @param hour - Hour value (0-23)
+   * @param minute - Minute value (default: 0)
+   * @returns Formatted time string
+   * @example
+   * ```typescript
+   * // 12-hour format
+   * timeFormatter: (hour) => {
+   *   const h = hour % 12 || 12;
+   *   const period = hour >= 12 ? 'PM' : 'AM';
+   *   return `${h} ${period}`;
+   * }
+   * ```
+   */
+  timeFormatter?: TimeFormatter;
 }
 
 // =============================================================================
@@ -74,7 +188,8 @@ export type DragMode =
   | "move"
   | "resize-left"
   | "resize-right"
-  | "resize-bottom";
+  | "resize-bottom"
+  | "resize-top";
 
 /**
  * Drag operation types
@@ -366,7 +481,11 @@ export interface CalendarConfig {
  * Internal resolved configuration with all defaults applied
  */
 export interface ResolvedCalendarConfig {
-  view: Required<ViewConfig>;
+  view: Required<Omit<ViewConfig, 'dayFilter' | 'timeFilter' | 'timeFormatter'>> & {
+    dayFilter?: (date: unknown, context: DayFilterContext) => DayFilterResult;
+    timeFilter?: (hour: number) => TimeFilterResult;
+    timeFormatter?: TimeFormatter;
+  };
   draggable: Required<DraggableConfig>;
   theme: Required<ThemeConfig> & {
     fontSize: Required<NonNullable<ThemeConfig["fontSize"]>>;

@@ -346,6 +346,7 @@ export class Calendar<T = Dayjs> {
         this.dragController,
         renderCallback,
         this.config.onEventClick,
+        this.config.view.dayFilter,
       );
     } else {
       this.timeRenderer.render(
@@ -357,6 +358,9 @@ export class Calendar<T = Dayjs> {
         renderCallback,
         this.config.onEventClick,
         preservedScrollTop,
+        this.config.view.dayFilter,
+        this.config.view.timeFilter,
+        this.config.view.timeFormatter,
       );
     }
 
@@ -464,14 +468,35 @@ export class Calendar<T = Dayjs> {
         DEFAULT_DATE_FORMATS.dayHeader,
     };
 
+    // Backward compatibility: convert showWeekends=false to dayFilter
+    let dayFilter = config.view?.dayFilter;
+    if (!dayFilter && config.view?.showWeekends === false) {
+      dayFilter = (_date: unknown, context: import("../types").DayFilterContext) => {
+        return !context.isWeekend;
+      };
+    }
+
+    const resolvedView: ResolvedCalendarConfig['view'] = {
+      type: config.view?.type || "week",
+      showDateHeader: config.view?.showDateHeader ?? true,
+      showWeekNumbers: config.view?.showWeekNumbers ?? false,
+      firstDayOfWeek: config.view?.firstDayOfWeek ?? 0,
+      showWeekends: config.view?.showWeekends ?? true,
+    };
+
+    // Add filter functions only if they exist (for exactOptionalPropertyTypes)
+    if (dayFilter) {
+      resolvedView.dayFilter = dayFilter;
+    }
+    if (config.view?.timeFilter) {
+      resolvedView.timeFilter = config.view.timeFilter;
+    }
+    if (config.view?.timeFormatter) {
+      resolvedView.timeFormatter = config.view.timeFormatter;
+    }
+
     const resolved: ResolvedCalendarConfig = {
-      view: {
-        type: config.view?.type || "week",
-        showDateHeader: config.view?.showDateHeader ?? true,
-        showWeekNumbers: config.view?.showWeekNumbers ?? false,
-        firstDayOfWeek: config.view?.firstDayOfWeek ?? 0,
-        showWeekends: config.view?.showWeekends ?? true,
-      },
+      view: resolvedView,
       draggable: {
         enabled: config.draggable?.enabled ?? true,
         snapMinutes: config.draggable?.snapMinutes ?? 15,

@@ -9,6 +9,10 @@ import type {
   TimeColumn,
   ViewType,
   DateFormatConfig,
+  DayFilterContext,
+  DayFilterResult,
+  TimeFilterResult,
+  TimeSlotConfig,
 } from "../types";
 
 /**
@@ -50,16 +54,23 @@ export class TimeEngine<T> {
 
   /**
    * Generate columns for time view
-   * Returns 1 column for day view, 7 columns for week view
+   * Returns 1 column for day view, up to 7 columns for week view
    *
    * @param currentDate - The current date
    * @param viewType - 'day' or 'week'
-   * @returns Array of TimeColumn objects
+   * @param dayFilter - Optional filter function to control which days are included
+   * @returns Array of TimeColumn objects for visible days
    */
-  generateColumns(currentDate: T, viewType: ViewType): Array<TimeColumn<T>> {
+  generateColumns(
+    currentDate: T,
+    viewType: ViewType,
+    dayFilter?: (date: T, context: DayFilterContext) => DayFilterResult,
+  ): Array<TimeColumn<T>> {
     const columns: Array<TimeColumn<T>> = [];
+    const today = this.adapter.create();
 
     if (viewType === "day") {
+      // Day view - always show single day (filter doesn't apply to single day view)
       columns.push({
         date: currentDate,
         dateStr: this.adapter.format(currentDate, this.dateFormats.date),
@@ -86,8 +97,26 @@ export class TimeEngine<T> {
         const dayOfWeek = this.adapter.day(curr);
         const isWeekend = dayOfWeek === 0 || dayOfWeek === 6; // Sunday or Saturday
 
-        // Only add if weekends are shown or it's not a weekend
-        if (this.showWeekends || !isWeekend) {
+        // Build filter context
+        const context: DayFilterContext = {
+          isWeekend,
+          dayOfWeek,
+          isToday: this.adapter.isSame(curr, today, "day"),
+          isThisMonth: this.adapter.isSame(curr, currentDate, "month"),
+        };
+
+        // Determine if this day should be included
+        let shouldInclude = true;
+        if (dayFilter) {
+          // Use dayFilter if provided (takes precedence)
+          const result = dayFilter(curr, context);
+          shouldInclude = typeof result === "boolean" ? result : result.visible;
+        } else if (!this.showWeekends && isWeekend) {
+          // Fallback to showWeekends for backward compatibility
+          shouldInclude = false;
+        }
+
+        if (shouldInclude) {
           columns.push({
             date: curr,
             dateStr: this.adapter.format(curr, this.dateFormats.date),
@@ -99,6 +128,42 @@ export class TimeEngine<T> {
     }
 
     return columns;
+  }
+
+  /**
+   * Generate time slots for time axis
+   * Returns time slots (hours) that should be displayed
+   *
+   * @param timeFilter - Optional filter function to control which hours are displayed
+   * @returns Array of objects with hour and optional config
+   */
+  generateTimeSlots(
+    timeFilter?: (hour: number) => TimeFilterResult,
+  ): Array<{ hour: number; config?: TimeSlotConfig }> {
+    const slots: Array<{ hour: number; config?: TimeSlotConfig }> = [];
+
+    for (let hour = 0; hour < 24; hour++) {
+      if (!timeFilter) {
+        // No filter - include all hours
+        slots.push({ hour });
+        continue;
+      }
+
+      const result = timeFilter(hour);
+      if (typeof result === "boolean") {
+        // Simple boolean return
+        if (result) {
+          slots.push({ hour });
+        }
+      } else {
+        // Advanced config return
+        if (result.visible) {
+          slots.push({ hour, config: result });
+        }
+      }
+    }
+
+    return slots;
   }
 
   /**

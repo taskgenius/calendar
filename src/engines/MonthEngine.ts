@@ -9,6 +9,7 @@ import type {
   GridCell,
   DateFormatConfig,
 } from "../types";
+import type { DayFilterContext, DayFilterResult } from "../types";
 
 /**
  * Engine for calculating month view layouts
@@ -27,12 +28,17 @@ export class MonthEngine<T> {
    * Includes days from previous/next months to fill complete weeks
    *
    * @param currentDate - The current date to generate grid for
-   * @returns Array of weeks, each containing 7 GridCell objects
+   * @param dayFilter - Optional filter function to control which days are included
+   * @returns Array of weeks, each containing GridCell objects for visible days
    */
-  generateGrid(currentDate: T): Array<Array<GridCell<T>>> {
+  generateGrid(
+    currentDate: T,
+    dayFilter?: (date: T, context: DayFilterContext) => DayFilterResult,
+  ): Array<Array<GridCell<T>>> {
     // Get month boundaries
     const monthStart = this.adapter.startOf(currentDate, "month");
     const monthEnd = this.adapter.endOf(currentDate, "month");
+    const today = this.adapter.create();
 
     // Adjust start to first day of week
     let start = this.adapter.startOf(monthStart, "week");
@@ -74,8 +80,26 @@ export class MonthEngine<T> {
         const dayOfWeek = this.adapter.day(curr);
         const isWeekend = dayOfWeek === 0 || dayOfWeek === 6; // Sunday or Saturday
 
-        // Only add if weekends are shown or it's not a weekend
-        if (this.showWeekends || !isWeekend) {
+        // Build filter context
+        const context: DayFilterContext = {
+          isWeekend,
+          dayOfWeek,
+          isToday: this.adapter.isSame(curr, today, "day"),
+          isThisMonth: this.adapter.isSame(curr, currentDate, "month"),
+        };
+
+        // Determine if this day should be included
+        let shouldInclude = true;
+        if (dayFilter) {
+          // Use dayFilter if provided (takes precedence)
+          const result = dayFilter(curr, context);
+          shouldInclude = typeof result === "boolean" ? result : result.visible;
+        } else if (!this.showWeekends && isWeekend) {
+          // Fallback to showWeekends for backward compatibility
+          shouldInclude = false;
+        }
+
+        if (shouldInclude) {
           days.push({
             date: curr,
             dateStr: this.adapter.format(curr, this.dateFormats.date),
@@ -85,7 +109,7 @@ export class MonthEngine<T> {
         curr = this.adapter.add(curr, 1, "day");
       }
 
-      // Only add week if it has days (could be empty if all weekends filtered)
+      // Only add week if it has days (could be empty if all days filtered)
       if (days.length > 0) {
         weeks.push(days);
       }
@@ -133,8 +157,26 @@ export class MonthEngine<T> {
           ? weekEnd
           : eventEnd;
 
-        let startIdx = this.adapter.diff(displayStart, weekStart, "day");
-        let span = this.adapter.diff(displayEnd, displayStart, "day") + 1;
+        // Normalize dates to day start (00:00:00) to avoid time-based truncation in diff
+        // This ensures multi-day events span correctly across all calendar days
+        const normalizedDisplayStart = this.adapter.startOf(
+          displayStart,
+          "day",
+        );
+        const normalizedDisplayEnd = this.adapter.startOf(displayEnd, "day");
+        const normalizedWeekStart = this.adapter.startOf(weekStart, "day");
+
+        let startIdx = this.adapter.diff(
+          normalizedDisplayStart,
+          normalizedWeekStart,
+          "day",
+        );
+        let span =
+          this.adapter.diff(
+            normalizedDisplayEnd,
+            normalizedDisplayStart,
+            "day",
+          ) + 1;
 
         // Adjust indices if weekends are hidden
         if (!this.showWeekends) {

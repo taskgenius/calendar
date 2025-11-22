@@ -1,10 +1,60 @@
-import { Calendar } from "../../../src";
+import { Calendar, hideWeekends, workingHours, format12h } from "../../../src";
 import type { CalendarEvent } from "../../../src/types";
 import "../../../src/styles/styles.css";
 
 // Initialize calendar
 const calendar = new Calendar("#app", {
-  view: { type: "week", showDateHeader: true },
+  view: {
+    type: "week",
+    showDateHeader: true,
+
+    // ===== Filter Examples (uncomment to test) =====
+
+    // Example 1: Hide weekends (simple preset)
+    // dayFilter: hideWeekends(),
+
+    // Example 2: Show only working hours (9 AM - 6 PM)
+    // timeFilter: workingHours(9, 18),
+
+    // Example 3: 12-hour time format
+    // timeFormatter: format12h(),
+
+    // Example 4: Advanced - Custom holiday styling
+    // dayFilter: (date, context) => {
+    //   const holidays = ['2025-01-01', '2025-12-25'];
+    //   const dateStr = new Date(
+    //     date.year(),
+    //     date.month(),
+    //     date.date()
+    //   ).toISOString().split('T')[0];
+    //
+    //   if (holidays.includes(dateStr)) {
+    //     return {
+    //       visible: true,
+    //       className: 'holiday',
+    //       style: { backgroundColor: '#fee2e2', border: '2px solid #ef4444' },
+    //       disabled: true
+    //     };
+    //   }
+    //   return true;
+    // },
+
+    // Example 5: Advanced - Custom time labels
+    // timeFormatter: (hour) => {
+    //   const labels = {
+    //     9: '🌅 Morning Standup',
+    //     12: '🍽️ Lunch Time',
+    //     14: '💻 Focus Time',
+    //     17: '🏠 End of Day'
+    //   };
+    //   return labels[hour] || `${hour}:00`;
+    // },
+
+    // Example 6: Hide specific days (e.g., Tuesday and Thursday)
+    // dayFilter: (date, context) => {
+    //   return context.dayOfWeek !== 2 && context.dayOfWeek !== 4;
+    // },
+  },
   events: getInitialEvents(),
   draggable: { enabled: true, snapMinutes: 15 },
   theme: {

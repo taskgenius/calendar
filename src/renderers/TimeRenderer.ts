@@ -8,6 +8,11 @@ import type {
   ViewType,
   TimeLayoutItem,
   DateFormatConfig,
+  DayFilterContext,
+  DayFilterResult,
+  DayRenderConfig,
+  TimeFilterResult,
+  TimeFormatter,
 } from "../types";
 import type { TimeEngine } from "../engines/TimeEngine";
 import type { DragController } from "../core/DragController";
@@ -41,21 +46,28 @@ export class TimeRenderer<T> {
     renderCallback: () => void,
     onEventClick?: (event: CalendarEvent) => void,
     initialScrollTop?: number | null,
+    dayFilter?: (date: T, context: DayFilterContext) => DayFilterResult,
+    timeFilter?: (hour: number) => TimeFilterResult,
+    timeFormatter?: TimeFormatter,
   ): void {
     clearElement(container);
 
-    const columns = this.engine.generateColumns(currentDate, viewType);
+    // Generate columns with dayFilter
+    const columns = this.engine.generateColumns(currentDate, viewType, dayFilter);
+
+    // Generate time slots with timeFilter
+    const timeSlots = this.engine.generateTimeSlots(timeFilter);
 
     // Render header
-    const header = this.renderHeader(columns);
+    const header = this.renderHeader(columns, currentDate, dayFilter);
     container.appendChild(header);
 
     // Render scrollable body
     const scrollWrap = createElement("div", "tg-time-grid-container");
     const bodyInner = createElement("div", "tg-time-body");
 
-    // Render time axis
-    const axis = this.renderTimeAxis();
+    // Render time axis with timeSlots and timeFormatter
+    const axis = this.renderTimeAxis(timeSlots, timeFormatter);
     bodyInner.appendChild(axis);
 
     // Render day columns
@@ -66,6 +78,7 @@ export class TimeRenderer<T> {
         dragController,
         renderCallback,
         onEventClick,
+        timeSlots,
       );
       bodyInner.appendChild(col);
     }
@@ -73,13 +86,17 @@ export class TimeRenderer<T> {
     scrollWrap.appendChild(bodyInner);
     container.appendChild(scrollWrap);
 
-    // Restore scroll position
+    // Restore scroll position (adjust for filtered time slots)
     setTimeout(() => {
       if (initialScrollTop !== null && initialScrollTop !== undefined) {
         scrollWrap.scrollTop = initialScrollTop;
       } else {
-        // Default to 8:00 AM
-        scrollWrap.scrollTop = 8 * this.theme.cellHeight;
+        // Default scroll to first visible time slot >= 8:00 AM
+        const defaultHour = 8;
+        const targetSlotIndex = timeSlots.findIndex((slot) => slot.hour >= defaultHour);
+        if (targetSlotIndex >= 0) {
+          scrollWrap.scrollTop = targetSlotIndex * this.theme.cellHeight;
+        }
       }
     }, 0);
   }
@@ -90,23 +107,54 @@ export class TimeRenderer<T> {
 
   private renderHeader(
     columns: Array<{ date: T; dateStr: string }>,
+    currentDate: T,
+    dayFilter?: (date: T, context: DayFilterContext) => DayFilterResult,
   ): HTMLElement {
     const header = createElement("div", "tg-time-header");
     header.style.paddingLeft = "60px";
 
-    const dayNames = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
+    // Weekday labels: Sunday through Saturday
+    const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
     const today = this.adapter.create();
 
     for (const col of columns) {
       const cell = createElement("div", "tg-time-header-cell");
 
-      // Highlight today
-      if (this.adapter.isSame(col.date, today, "day")) {
+      // Build filter context
+      const dayOfWeek = this.adapter.day(col.date);
+      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+      const isToday = this.adapter.isSame(col.date, today, "day");
+      const context: DayFilterContext = {
+        isWeekend,
+        dayOfWeek,
+        isToday,
+        isThisMonth: this.adapter.isSame(col.date, currentDate, "month"),
+      };
+
+      // Apply dayFilter configuration if provided
+      if (dayFilter) {
+        const result = dayFilter(col.date, context);
+        if (typeof result === "object") {
+          const config = result as DayRenderConfig;
+          if (config.className) {
+            cell.classList.add(config.className);
+          }
+          if (config.style) {
+            Object.assign(cell.style, config.style);
+          }
+          if (config.disabled) {
+            cell.classList.add("tg-disabled");
+          }
+        }
+      }
+
+      // Highlight today (default styling)
+      if (isToday && !dayFilter) {
         cell.style.backgroundColor = "rgba(59, 130, 246, 0.1)";
         cell.style.color = "#3b82f6";
       }
 
-      const dayName = dayNames[this.adapter.day(col.date)];
+      const dayName = dayNames[dayOfWeek];
       const dateNum = this.adapter.date(col.date);
 
       cell.innerHTML = `
@@ -120,15 +168,34 @@ export class TimeRenderer<T> {
     return header;
   }
 
-  private renderTimeAxis(): HTMLElement {
+  private renderTimeAxis(
+    timeSlots: Array<{ hour: number; config?: import("../types").TimeSlotConfig }>,
+    timeFormatter?: TimeFormatter,
+  ): HTMLElement {
     const axis = createElement("div", "tg-time-axis");
 
-    for (let i = 0; i < 24; i++) {
+    for (let slotIndex = 0; slotIndex < timeSlots.length; slotIndex++) {
+      const slot = timeSlots[slotIndex]!;
       const label = createElement("div", "tg-time-axis-label");
-      label.textContent = `${i}:00`;
+
+      // Apply custom label or formatter
+      if (slot.config?.label) {
+        label.textContent = slot.config.label;
+      } else if (timeFormatter) {
+        label.textContent = timeFormatter(slot.hour, 0);
+      } else {
+        label.textContent = `${slot.hour}:00`;
+      }
+
+      // Apply custom className
+      if (slot.config?.className) {
+        label.classList.add(slot.config.className);
+      }
+
+      // Position based on slot index (not hour) to account for filtered hours
       setStyles(label, {
         position: "absolute",
-        top: `${i * this.theme.cellHeight}px`,
+        top: `${slotIndex * this.theme.cellHeight}px`,
       });
       axis.appendChild(label);
     }
@@ -142,9 +209,15 @@ export class TimeRenderer<T> {
     dragController: DragController<T>,
     renderCallback: () => void,
     onEventClick?: (event: CalendarEvent) => void,
+    timeSlots?: Array<{ hour: number; config?: import("../types").TimeSlotConfig }>,
   ): HTMLElement {
     const col = createElement("div", "tg-day-column");
     col.dataset["date"] = colData.dateStr;
+
+    // Adjust height based on visible time slots
+    if (timeSlots && timeSlots.length > 0) {
+      col.style.height = `${timeSlots.length * this.theme.cellHeight}px`;
+    }
 
     // Calculate layout for events on this day
     const layout = this.engine.calculateLayout(events, colData.dateStr);
@@ -216,9 +289,18 @@ export class TimeRenderer<T> {
     titleText.textContent = item.event.title;
     el.appendChild(titleText);
 
-    // Add resize handle
-    const resizeHandle = createElement("div", "tg-resize-handle tg-resize-v");
-    el.appendChild(resizeHandle);
+    // Add resize handles (top and bottom)
+    const resizeHandleTop = createElement(
+      "div",
+      "tg-resize-handle tg-resize-v tg-top",
+    );
+    el.appendChild(resizeHandleTop);
+
+    const resizeHandleBottom = createElement(
+      "div",
+      "tg-resize-handle tg-resize-v tg-bottom",
+    );
+    el.appendChild(resizeHandleBottom);
 
     // Event click handler
     if (onEventClick) {

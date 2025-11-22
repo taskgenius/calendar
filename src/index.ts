@@ -30,6 +30,21 @@ export { TimeRenderer } from "./renderers/TimeRenderer";
 // Styles
 export { applyThemeVariables, clearThemeVariables } from "./styles";
 
+// Preset utilities
+export {
+  hideWeekends,
+  hideWeekdays,
+  onlyDays,
+  hideDays,
+  workingHours,
+  hideHours,
+  onlyHours,
+  format12h,
+  format24h,
+  customTimeLabels,
+  formatCompact,
+} from "./utils/presets";
+
 // Types
 export type {
   CalendarEvent,
@@ -46,4 +61,10 @@ export type {
   DragType,
   DragState,
   ResolvedCalendarConfig,
+  DayFilterContext,
+  DayRenderConfig,
+  TimeSlotConfig,
+  TimeFormatter,
+  DayFilterResult,
+  TimeFilterResult,
 } from "./types";

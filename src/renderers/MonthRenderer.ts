@@ -7,6 +7,9 @@ import type {
   ThemeConfig,
   MonthLayoutItem,
   DateFormatConfig,
+  DayFilterContext,
+  DayFilterResult,
+  DayRenderConfig,
 } from "../types";
 import type { MonthEngine } from "../engines/MonthEngine";
 import type { DragController } from "../core/DragController";
@@ -48,19 +51,21 @@ export class MonthRenderer<T> {
     dragController: DragController<T>,
     renderCallback: () => void,
     onEventClick?: (event: CalendarEvent) => void,
+    dayFilter?: (date: T, context: DayFilterContext) => DayFilterResult,
   ): void {
     clearElement(container);
 
-    // Render header with day names
-    const header = this.renderHeader();
+    // Generate grid with dayFilter
+    const weeks = this.engine.generateGrid(currentDate, dayFilter);
+
+    // Render header with day names (dynamically adjusts to number of visible columns)
+    const header = this.renderHeader(weeks[0]?.length || 7);
     container.appendChild(header);
 
     // Render body with weeks
     const body = createElement("div", "tg-month-body");
     body.style.overflowY = "auto";
     body.style.height = "600px";
-
-    const weeks = this.engine.generateGrid(currentDate);
 
     for (const weekDays of weeks) {
       const row = this.renderWeekRow(
@@ -70,6 +75,7 @@ export class MonthRenderer<T> {
         dragController,
         renderCallback,
         onEventClick,
+        dayFilter,
       );
       body.appendChild(row);
     }
@@ -81,25 +87,22 @@ export class MonthRenderer<T> {
   // Private Methods
   // ==========================================================================
 
-  private renderHeader(): HTMLElement {
+  private renderHeader(columnCount: number): HTMLElement {
     const header = createElement("div", "tg-month-header");
-    const allDayNames = ["日", "一", "二", "三", "四", "五", "六"];
+    // Weekday labels: Sunday through Saturday
+    const allDayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-    // Generate day names based on firstDayOfWeek and showWeekends
+    // Generate day names based on firstDayOfWeek and actual column count
     const dayNames: string[] = [];
     const firstDay = (this.engine as any).firstDayOfWeek || 0;
 
-    for (let i = 0; i < 7; i++) {
+    // Generate labels for the actual number of visible columns
+    for (let i = 0; i < columnCount; i++) {
       const dayIndex = (firstDay + i) % 7;
-      const isWeekend = dayIndex === 0 || dayIndex === 6;
-
-      // Only add if weekends are shown or it's not a weekend
-      if ((this.engine as any).showWeekends || !isWeekend) {
-        dayNames.push(allDayNames[dayIndex]!);
-      }
+      dayNames.push(allDayNames[dayIndex]!);
     }
 
-    // Apply dynamic grid class
+    // Apply dynamic grid layout
     header.style.display = "grid";
     header.style.gridTemplateColumns = `repeat(${dayNames.length}, 1fr)`;
 
@@ -119,9 +122,11 @@ export class MonthRenderer<T> {
     dragController: DragController<T>,
     renderCallback: () => void,
     onEventClick?: (event: CalendarEvent) => void,
+    dayFilter?: (date: T, context: DayFilterContext) => DayFilterResult,
   ): HTMLElement {
     const row = createElement("div", "tg-month-row");
     row.dataset["date"] = weekDays[0]!.dateStr;
+    const columnCount = weekDays.length;
 
     // Apply dynamic grid layout
     row.style.display = "grid";
@@ -131,7 +136,7 @@ export class MonthRenderer<T> {
 
     // Render date cells
     for (const day of weekDays) {
-      const cell = this.renderDateCell(day, currentDate, events);
+      const cell = this.renderDateCell(day, currentDate, events, dayFilter);
       row.appendChild(cell);
     }
 
@@ -143,6 +148,7 @@ export class MonthRenderer<T> {
     for (const item of layout) {
       const eventEl = this.renderEventBar(
         item,
+        columnCount,
         dragController,
         renderCallback,
         onEventClick,
@@ -157,6 +163,7 @@ export class MonthRenderer<T> {
     day: { date: T; dateStr: string },
     currentDate: T,
     events: CalendarEvent[],
+    dayFilter?: (date: T, context: DayFilterContext) => DayFilterResult,
   ): HTMLElement {
     const cell = createElement("div", "tg-month-cell");
     cell.style.padding = "4px";
@@ -170,6 +177,38 @@ export class MonthRenderer<T> {
     const isFuture = this.adapter.isAfter(day.date, today, "day");
     const isThisMonth =
       this.adapter.month(day.date) === this.adapter.month(currentDate);
+
+    // Build filter context
+    const dayOfWeek = this.adapter.day(day.date);
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+    const context: DayFilterContext = {
+      isWeekend,
+      dayOfWeek,
+      isToday,
+      isThisMonth,
+    };
+
+    // Apply dayFilter configuration if provided
+    if (dayFilter) {
+      const result = dayFilter(day.date, context);
+      if (typeof result === "object") {
+        const config = result as DayRenderConfig;
+        // Apply custom className
+        if (config.className) {
+          cell.classList.add(config.className);
+        }
+        // Apply custom inline styles
+        if (config.style) {
+          Object.assign(cell.style, config.style);
+        }
+        // Apply disabled state
+        if (config.disabled) {
+          cell.classList.add("tg-disabled");
+          cell.style.pointerEvents = "none";
+          cell.style.opacity = "0.5";
+        }
+      }
+    }
 
     // Style based on month
     if (isThisMonth) {
@@ -227,6 +266,7 @@ export class MonthRenderer<T> {
 
   private renderEventBar(
     item: MonthLayoutItem,
+    columnCount: number,
     dragController: DragController<T>,
     renderCallback: () => void,
     onEventClick?: (event: CalendarEvent) => void,
@@ -252,9 +292,8 @@ export class MonthRenderer<T> {
       }
     }
 
-    // Calculate column width percentage based on actual number of columns
-    const colCount = (this.engine as any).showWeekends ? 7 : 5;
-    const colWidth = 100 / colCount;
+    // Calculate column width percentage based on actual number of visible columns
+    const colWidth = 100 / columnCount;
 
     // Set position and size
     setStyles(el, {

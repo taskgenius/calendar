@@ -7,6 +7,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 🐛 Bug Fixes
+
+- **Fixed event bar positioning with dayFilter**: Event bars in month view now correctly align with columns when arbitrary days are filtered out. Previously, positioning assumed exactly 7 or 5 columns (based on `showWeekends`), causing misalignment when `dayFilter` hid non-weekend days.
+- **Changed weekday labels to English**: Replaced Chinese weekday labels ("日", "一", etc.) with English abbreviations ("Sun", "Mon", etc.) to avoid encoding issues and allow developers to customize labels as needed.
+
+### ✨ Features
+
+- **Unified filter architecture for rendering control**: Introduced comprehensive filtering system for day and time rendering
+  - `dayFilter`: Control which days are rendered and how they appear (all views)
+  - `timeFilter`: Control which time slots are displayed (week/day views only)
+  - `timeFormatter`: Customize time label formatting (week/day views only)
+- **11 preset utility functions** for common use cases:
+  - Day filters: `hideWeekends()`, `hideWeekdays()`, `onlyDays()`, `hideDays()`
+  - Time filters: `workingHours()`, `hideHours()`, `onlyHours()`
+  - Time formatters: `format12h()`, `format24h()`, `customTimeLabels()`, `formatCompact()`
+- **Advanced rendering customization**: Filters can return simple boolean or detailed configuration objects
+  - `DayRenderConfig`: control visibility, className, inline styles, and disabled state
+  - `TimeSlotConfig`: control visibility, custom labels, and className
+- **Dynamic grid layout**: Calendar automatically adjusts column count based on visible days
+- **Backward compatibility**: Existing `showWeekends` config automatically converts to `dayFilter`
+
+### 📦 New Exports
+
+- Preset functions: `hideWeekends`, `hideWeekdays`, `onlyDays`, `hideDays`, `workingHours`, `hideHours`, `onlyHours`, `format12h`, `format24h`, `customTimeLabels`, `formatCompact`
+- Types: `DayFilterContext`, `DayRenderConfig`, `TimeSlotConfig`, `TimeFormatter`, `DayFilterResult`, `TimeFilterResult`
+
+### 🎨 Styles
+
+- Added `.tg-disabled` class for filtered-out day cells (opacity: 0.5, pointer-events: none)
+- Added `.tg-time-axis-label.custom` placeholder class for custom time slot styling
+
+### 📝 Examples
+
+- Updated demo with 6 comprehensive filter examples (commented out by default)
+
+### 🧪 Testing
+
+- Added comprehensive test coverage for bug fixes (17 new tests)
+  - `MonthRenderer.test.ts`: 8 tests covering weekday labels, event positioning with dayFilter, and dynamic grid layout
+  - `TimeRenderer.test.ts`: 9 tests covering weekday labels, dynamic column layout, time slot filtering, and time formatters
+  - All tests verify English labels (no Chinese characters) and correct positioning with filtered days
+
 ## [0.5.0] - 2025-11-21
 
 ### ⚠️ Breaking Changes

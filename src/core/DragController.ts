@@ -101,7 +101,11 @@ export class DragController<T> {
       let mode: DragMode = "move";
 
       const target = e.target as HTMLElement;
-      if (target.classList.contains("tg-resize-v")) mode = "resize-bottom";
+      if (target.classList.contains("tg-resize-v")) {
+        mode = target.classList.contains("tg-top")
+          ? "resize-top"
+          : "resize-bottom";
+      }
 
       const startDate = this.adapter.parse(event.start);
       const endDate = this.adapter.parse(event.end);
@@ -250,6 +254,8 @@ export class DragController<T> {
         newEnd = this.adapter.add(newStart, duration, "day");
       }
     } else if (s.mode === "resize-right") {
+      // Resize right: keep start unchanged, adjust end
+      newStart = s.startDate;
       if (this.config.dateOnly) {
         // Preserve time when resizing in date-only mode
         const originalHour = this.adapter.hour(s.endDate);
@@ -265,6 +271,8 @@ export class DragController<T> {
         newEnd = newStart;
       }
     } else if (s.mode === "resize-left") {
+      // Resize left: keep end unchanged, adjust start
+      newEnd = s.endDate;
       if (this.config.dateOnly) {
         // Preserve time when resizing in date-only mode
         const originalHour = this.adapter.hour(s.startDate);
@@ -323,6 +331,33 @@ export class DragController<T> {
           snappedMins,
         );
         newEnd = this.adapter.add(newStart, s.origDuration || 60, "minute");
+      }
+    } else if (s.mode === "resize-top") {
+      // Resize top: adjust start time, keep end time unchanged
+      if (this.config.dateOnly) {
+        // Date-only mode: only adjust date, keep original time
+        const daysDiff = this.adapter.diff(newDateBase, s.startDate, "day");
+        newStart = this.adapter.add(s.startDate, daysDiff, "day");
+        newEnd = s.endDate;
+      } else {
+        newEnd = s.endDate;
+
+        if (this.adapter.isSame(newDateBase, s.endDate, "day")) {
+          // Same day: ensure start time is before end time with minimum 15 minutes
+          const endMin =
+            this.adapter.hour(s.endDate) * 60 + this.adapter.minute(s.endDate);
+          const startMins = Math.min(endMin - 15, snappedMins);
+          newStart = this.adapter.setMinute(
+            this.adapter.setHour(newDateBase, 0),
+            startMins,
+          );
+        } else {
+          // Different day: allow any time
+          newStart = this.adapter.setMinute(
+            this.adapter.setHour(newDateBase, 0),
+            snappedMins,
+          );
+        }
       }
     } else {
       // resize-bottom
