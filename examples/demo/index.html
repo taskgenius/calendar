@@ -1,112 +1,116 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>@taskgenius/calendar Demo</title>
-  <style>
-    * {
-      box-sizing: border-box;
-    }
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>@taskgenius/calendar Demo</title>
+        <style>
+            * {
+                box-sizing: border-box;
+            }
 
-    body {
-      margin: 0;
-      padding: 20px;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: #f3f4f6;
-      min-height: 100vh;
-    }
+            body {
+                margin: 0;
+                padding: 20px;
+                font-family:
+                    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                    sans-serif;
+                background: #f3f4f6;
+                min-height: 100vh;
+            }
 
-    .container {
-      max-width: 1200px;
-      margin: 0 auto;
-    }
+            .container {
+                max-width: 1200px;
+                margin: 0 auto;
+            }
 
-    h1 {
-      text-align: center;
-      color: #1f2937;
-      margin-bottom: 20px;
-    }
+            h1 {
+                text-align: center;
+                color: #1f2937;
+                margin-bottom: 20px;
+            }
 
-    .demo-controls {
-      display: flex;
-      gap: 10px;
-      margin-bottom: 20px;
-      flex-wrap: wrap;
-    }
+            .demo-controls {
+                display: flex;
+                gap: 10px;
+                margin-bottom: 20px;
+                flex-wrap: wrap;
+            }
 
-    .demo-controls button {
-      padding: 8px 16px;
-      border: 1px solid #e5e7eb;
-      border-radius: 6px;
-      background: white;
-      cursor: pointer;
-      font-size: 14px;
-      transition: all 0.2s;
-    }
+            .demo-controls button {
+                padding: 8px 16px;
+                border: 1px solid #e5e7eb;
+                border-radius: 6px;
+                background: white;
+                cursor: pointer;
+                font-size: 14px;
+                transition: all 0.2s;
+            }
 
-    .demo-controls button:hover {
-      background: #f9fafb;
-      border-color: #d1d5db;
-    }
+            .demo-controls button:hover {
+                background: #f9fafb;
+                border-color: #d1d5db;
+            }
 
-    .demo-controls button.primary {
-      background: #3b82f6;
-      color: white;
-      border-color: #3b82f6;
-    }
+            .demo-controls button.primary {
+                background: #3b82f6;
+                color: white;
+                border-color: #3b82f6;
+            }
 
-    .demo-controls button.primary:hover {
-      background: #2563eb;
-    }
+            .demo-controls button.primary:hover {
+                background: #2563eb;
+            }
 
-    #app {
-      display: flex;
-      justify-content: center;
-    }
+            #app {
+                display: flex;
+                justify-content: center;
+            }
 
-    .event-log {
-      margin-top: 20px;
-      padding: 16px;
-      background: white;
-      border-radius: 8px;
-      border: 1px solid #e5e7eb;
-    }
+            .event-log {
+                margin-top: 20px;
+                padding: 16px;
+                background: white;
+                border-radius: 8px;
+                border: 1px solid #e5e7eb;
+            }
 
-    .event-log h3 {
-      margin: 0 0 10px 0;
-      font-size: 14px;
-      color: #6b7280;
-    }
+            .event-log h3 {
+                margin: 0 0 10px 0;
+                font-size: 14px;
+                color: #6b7280;
+            }
 
-    .event-log pre {
-      margin: 0;
-      font-size: 12px;
-      color: #374151;
-      white-space: pre-wrap;
-      max-height: 150px;
-      overflow-y: auto;
-    }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <h1>@taskgenius/calendar Demo</h1>
+            .event-log pre {
+                margin: 0;
+                font-size: 12px;
+                color: #374151;
+                white-space: pre-wrap;
+                max-height: 150px;
+                overflow-y: auto;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>@taskgenius/calendar Demo</h1>
 
-    <div class="demo-controls">
-      <button class="primary" onclick="addRandomEvent()">添加随机事件</button>
-      <button onclick="clearEvents()">清空事件</button>
-      <button onclick="toggleDrag()">切换拖拽</button>
-    </div>
+            <div class="demo-controls">
+                <button class="primary" onclick="addRandomEvent()">
+                    Add Random Event
+                </button>
+                <button onclick="clearEvents()">Clear Events</button>
+                <button onclick="toggleDrag()">Switch Drag</button>
+            </div>
 
-    <div id="app"></div>
+            <div id="app"></div>
 
-    <div class="event-log">
-      <h3>事件日志</h3>
-      <pre id="log">等待操作...</pre>
-    </div>
-  </div>
+            <div class="event-log">
+                <h3>Log</h3>
+                <pre id="log">Waiting...</pre>
+            </div>
+        </div>
 
-  <script type="module" src="/src/main.ts"></script>
-</body>
+        <script type="module" src="/src/main.ts"></script>
+    </body>
 </html>

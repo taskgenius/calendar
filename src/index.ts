@@ -11,6 +11,7 @@ export { Calendar } from "./core/Calendar";
 // Core utilities
 export { EventManager } from "./core/EventManager";
 export { DragController } from "./core/DragController";
+export { InteractionController } from "./core/InteractionController";
 
 // Date adapters
 export { DayJsAdapter } from "./adapters/DayJsAdapter";

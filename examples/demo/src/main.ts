@@ -1,27 +1,71 @@
-import { Calendar } from '../../../src';
-import type { CalendarEvent } from '../../../src/types';
+import { Calendar } from "../../../src";
+import type { CalendarEvent } from "../../../src/types";
+import "../../../src/styles/styles.css";
 
 // Initialize calendar
-const calendar = new Calendar('#app', {
-  view: { type: 'week', showDateHeader: true },
+const calendar = new Calendar("#app", {
+  view: { type: "week", showDateHeader: true },
   events: getInitialEvents(),
   draggable: { enabled: true, snapMinutes: 15 },
   theme: {
-    primaryColor: '#3b82f6',
-    cellHeight: 60
+    primaryColor: "#3b82f6",
+    cellHeight: 60,
   },
+  // Event interactions
   onEventClick: (event) => {
-    log(`点击事件: ${event.title} (${event.id})`);
+    log(`[Event] Click: ${event.title} (${event.id})`);
+  },
+  onEventDoubleClick: (event) => {
+    log(`[Event] Double Click: ${event.title} (${event.id})`);
+  },
+  onEventContextMenu: (event, x, y) => {
+    log(`[Event] Context Menu: ${event.title} at (${x}, ${y})`);
   },
   onEventDrop: (event, newStart, newEnd) => {
-    log(`事件移动: ${event.title}\n  从: ${event.start}\n  到: ${newStart} - ${newEnd}`);
+    log(
+      `[Event] Move: ${event.title}\n  From: ${event.start}\n  To: ${newStart} - ${newEnd}`,
+    );
   },
+
+  // Date interactions (month view)
+  onDateClick: (date) => {
+    log(`[Date] click: ${date}`);
+  },
+  onDateDoubleClick: (date) => {
+    log(`[Date] double click: ${date}`);
+  },
+  onDateContextMenu: (date, x, y) => {
+    log(`[Date] context menu: ${date} at (${x}, ${y})`);
+  },
+
+  // Time slot interactions (week/day view)
+  onTimeSlotClick: (dateTime) => {
+    log(`[Time Slot] click: ${dateTime}`);
+  },
+  onTimeSlotDoubleClick: (dateTime) => {
+    log(`[Time Slot] double click: ${dateTime}`);
+  },
+  onTimeSlotContextMenu: (dateTime, x, y) => {
+    log(`[Time Slot] context menu: ${dateTime} at (${x}, ${y})`);
+  },
+
+  // Range selection
+  onDateRangeSelect: (startDate, endDate) => {
+    log(`[Time Range Selection] Date Range: ${startDate} to ${endDate}`);
+  },
+  onTimeRangeSelect: (startDateTime, endDateTime) => {
+    log(
+      `[Time Range Selection] Time Range: ${startDateTime} to ${endDateTime}`,
+    );
+  },
+
+  // Other callbacks
   onViewChange: (viewType) => {
-    log(`视图切换: ${viewType}`);
+    log(`[View] Switch: ${viewType}`);
   },
   onDateChange: (date) => {
-    log(`日期导航: ${date}`);
-  }
+    log(`[Navigation] Date: ${date}`);
+  },
 });
 
 // Helper functions
@@ -32,47 +76,47 @@ function getInitialEvents(): CalendarEvent[] {
 
   return [
     {
-      id: '1',
-      title: '冲刺会议',
+      id: "1",
+      title: "Meeting",
       start: formatDate(addDays(startOfWeek, 1), 10, 0),
       end: formatDate(addDays(startOfWeek, 1), 11, 30),
-      color: '#3b82f6'
+      color: "#3b82f6",
     },
     {
-      id: '2',
-      title: '技术评审',
+      id: "2",
+      title: "Technical Review",
       start: formatDate(addDays(startOfWeek, 1), 10, 30),
       end: formatDate(addDays(startOfWeek, 1), 12, 0),
-      color: '#6366f1'
+      color: "#6366f1",
     },
     {
-      id: '3',
-      title: '长期项目 (跨天)',
+      id: "3",
+      title: "Long-term Project (Cross-day)",
       start: formatDate(addDays(startOfWeek, -1), 0, 0),
       end: formatDate(addDays(startOfWeek, 2), 0, 0),
-      color: '#a855f7'
+      color: "#a855f7",
     },
     {
-      id: '4',
-      title: '午餐',
+      id: "4",
+      title: "Lunch",
       start: formatDate(addDays(startOfWeek, 2), 12, 0),
       end: formatDate(addDays(startOfWeek, 2), 13, 0),
-      color: '#22c55e'
+      color: "#22c55e",
     },
     {
-      id: '5',
-      title: '代码评审',
+      id: "5",
+      title: "Code Review",
       start: formatDate(addDays(startOfWeek, 3), 14, 0),
       end: formatDate(addDays(startOfWeek, 3), 16, 0),
-      color: '#ef4444'
+      color: "#ef4444",
     },
     {
-      id: '6',
-      title: '周五总结',
+      id: "6",
+      title: "Friday Summary",
       start: formatDate(addDays(startOfWeek, 5), 16, 0),
       end: formatDate(addDays(startOfWeek, 5), 17, 0),
-      color: '#f97316'
-    }
+      color: "#f97316",
+    },
   ];
 }
 
@@ -84,15 +128,15 @@ function addDays(date: Date, days: number): Date {
 
 function formatDate(date: Date, hours: number, minutes: number): string {
   const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  const h = String(hours).padStart(2, '0');
-  const m = String(minutes).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const h = String(hours).padStart(2, "0");
+  const m = String(minutes).padStart(2, "0");
   return `${year}-${month}-${day} ${h}:${m}`;
 }
 
 function log(message: string): void {
-  const logEl = document.getElementById('log');
+  const logEl = document.getElementById("log");
   if (logEl) {
     const timestamp = new Date().toLocaleTimeString();
     logEl.textContent = `[${timestamp}] ${message}\n\n${logEl.textContent}`;
@@ -103,8 +147,22 @@ function log(message: string): void {
 let eventCounter = 100;
 
 (window as any).addRandomEvent = () => {
-  const colors = ['#3b82f6', '#22c55e', '#ef4444', '#f97316', '#8b5cf6', '#ec4899'];
-  const titles = ['新会议', '工作任务', '电话会议', '项目讨论', '培训', '面试'];
+  const colors = [
+    "#3b82f6",
+    "#22c55e",
+    "#ef4444",
+    "#f97316",
+    "#8b5cf6",
+    "#ec4899",
+  ];
+  const titles = [
+    "New Event",
+    "Task",
+    "Phone Meeting",
+    "Project Discussion",
+    "Training",
+    "Interview",
+  ];
 
   const today = new Date();
   const hour = Math.floor(Math.random() * 8) + 9; // 9-16
@@ -115,25 +173,23 @@ let eventCounter = 100;
     title: titles[Math.floor(Math.random() * titles.length)]!,
     start: formatDate(today, hour, 0),
     end: formatDate(today, hour + duration, 0),
-    color: colors[Math.floor(Math.random() * colors.length)]
+    color: colors[Math.floor(Math.random() * colors.length)],
   };
 
   calendar.addEvent(event);
-  log(`添加事件: ${event.title} (${event.start})`);
+  log(`Added Event: ${event.title} (${event.start})`);
 };
 
 (window as any).clearEvents = () => {
   calendar.setEvents([]);
-  log('已清空所有事件');
+  log("Cleared all events");
 };
 
-let dragEnabled = true;
 (window as any).toggleDrag = () => {
-  dragEnabled = !dragEnabled;
-  // Note: This would require re-initializing the calendar with new config
-  // For demo purposes, we just log the action
-  log(`拖拽功能: ${dragEnabled ? '已启用' : '已禁用'} (需要重新初始化生效)`);
+  const newState = !calendar.isDraggable();
+  calendar.setDraggable(newState);
+  log(`Drag: ${newState ? "Enabled" : "Disabled"}`);
 };
 
 // Initial log
-log('日历初始化完成');
+log("Calendar initialized");

@@ -16,6 +16,7 @@ import { MonthRenderer } from "../renderers/MonthRenderer";
 import { TimeRenderer } from "../renderers/TimeRenderer";
 import { DragController } from "./DragController";
 import { EventManager } from "./EventManager";
+import { InteractionController } from "./InteractionController";
 import { applyThemeVariables } from "../styles";
 import { createElement, clearElement } from "../utils/dom";
 import { DEFAULT_DATE_FORMATS, INTERNAL_DATA_FORMAT } from "../constants";
@@ -43,6 +44,7 @@ export class Calendar<T = Dayjs> {
   private currentView: ViewType;
   private eventManager: EventManager;
   private dragController: DragController<T>;
+  private interactionController: InteractionController<T>;
 
   // Engines
   private monthEngine: MonthEngine<T>;
@@ -91,6 +93,15 @@ export class Calendar<T = Dayjs> {
       this.handleEventDrop.bind(this),
       this.config.theme.cellHeight,
       this.config.dateFormats,
+    );
+
+    // 5.5. Initialize interaction controller
+    this.interactionController = new InteractionController<T>(
+      this.adapter,
+      this.config,
+      this.dragController,
+      () => this.currentView,
+      this.eventManager,
     );
 
     // 6. Initialize engines
@@ -269,6 +280,7 @@ export class Calendar<T = Dayjs> {
    */
   destroy(): void {
     this.dragController.destroy();
+    this.interactionController.destroy();
     clearElement(this.container);
   }
 
@@ -277,6 +289,22 @@ export class Calendar<T = Dayjs> {
    */
   refresh(): void {
     this.render();
+  }
+
+  /**
+   * Enable or disable drag-and-drop functionality
+   *
+   * @param enabled - Whether drag-and-drop should be enabled
+   */
+  setDraggable(enabled: boolean): void {
+    this.config.draggable.enabled = enabled;
+  }
+
+  /**
+   * Check if drag-and-drop is currently enabled
+   */
+  isDraggable(): boolean {
+    return this.config.draggable.enabled;
   }
 
   // ==========================================================================
@@ -334,6 +362,9 @@ export class Calendar<T = Dayjs> {
 
     mainContainer.appendChild(viewBody);
     this.container.appendChild(mainContainer);
+
+    // Initialize interaction listeners
+    this.interactionController.init(mainContainer);
   }
 
   private renderHeader(): HTMLElement {
@@ -347,9 +378,9 @@ export class Calendar<T = Dayjs> {
     // View switcher
     const viewSwitch = createElement("div", "tg-view-switch");
     const views: Array<{ type: ViewType; label: string }> = [
-      { type: "month", label: "月" },
-      { type: "week", label: "周" },
-      { type: "day", label: "日" },
+      { type: "month", label: "M" },
+      { type: "week", label: "W" },
+      { type: "day", label: "D" },
     ];
 
     for (const view of views) {
@@ -464,9 +495,28 @@ export class Calendar<T = Dayjs> {
     };
 
     if (config.onEventClick) resolved.onEventClick = config.onEventClick;
+    if (config.onEventDoubleClick)
+      resolved.onEventDoubleClick = config.onEventDoubleClick;
+    if (config.onEventContextMenu)
+      resolved.onEventContextMenu = config.onEventContextMenu;
     if (config.onEventDrop) resolved.onEventDrop = config.onEventDrop;
     if (config.onViewChange) resolved.onViewChange = config.onViewChange;
     if (config.onDateChange) resolved.onDateChange = config.onDateChange;
+    if (config.onDateClick) resolved.onDateClick = config.onDateClick;
+    if (config.onDateDoubleClick)
+      resolved.onDateDoubleClick = config.onDateDoubleClick;
+    if (config.onDateContextMenu)
+      resolved.onDateContextMenu = config.onDateContextMenu;
+    if (config.onTimeSlotClick)
+      resolved.onTimeSlotClick = config.onTimeSlotClick;
+    if (config.onTimeSlotDoubleClick)
+      resolved.onTimeSlotDoubleClick = config.onTimeSlotDoubleClick;
+    if (config.onTimeSlotContextMenu)
+      resolved.onTimeSlotContextMenu = config.onTimeSlotContextMenu;
+    if (config.onDateRangeSelect)
+      resolved.onDateRangeSelect = config.onDateRangeSelect;
+    if (config.onTimeRangeSelect)
+      resolved.onTimeRangeSelect = config.onTimeRangeSelect;
     if (config.onRenderDateCell)
       resolved.onRenderDateCell = config.onRenderDateCell;
     if (config.onStyleEvent) resolved.onStyleEvent = config.onStyleEvent;

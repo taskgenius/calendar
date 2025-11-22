@@ -47,6 +47,8 @@ export class DragController<T> {
 
     el.onmousedown = (e: MouseEvent) => {
       if (e.button !== 0) return;
+      // Runtime check: support dynamic disable
+      if (!this.config.enabled) return;
       e.stopPropagation();
 
       const row = el.closest(".tg-month-row") as HTMLElement | null;
@@ -88,6 +90,8 @@ export class DragController<T> {
 
     el.onmousedown = (e: MouseEvent) => {
       if (e.button !== 0) return;
+      // Runtime check: support dynamic disable
+      if (!this.config.enabled) return;
       e.stopPropagation();
 
       const col = el.closest(".tg-day-column") as HTMLElement | null;
@@ -124,6 +128,14 @@ export class DragController<T> {
    */
   setCellHeight(height: number): void {
     this.cellHeight = height;
+  }
+
+  /**
+   * Check if currently dragging an event
+   * Used by InteractionController to prevent conflicts with range selection
+   */
+  isDragging(): boolean {
+    return this.state !== null;
   }
 
   /**

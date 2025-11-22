@@ -102,6 +102,26 @@ export interface DragState<T> {
   renderCallback: () => void;
 }
 
+/**
+ * Internal state for range selection
+ */
+export interface RangeSelectionState<T> {
+  /** Whether currently selecting a range */
+  isSelecting: boolean;
+  /** Start date/time of the selection */
+  startDate: T | null;
+  /** Starting X coordinate */
+  startX: number;
+  /** Starting Y coordinate */
+  startY: number;
+  /** Current date/time during selection */
+  currentDate: T | null;
+  /** Type of view where selection is happening */
+  viewType: "month" | "time";
+  /** Column element for time view selection */
+  columnEl?: HTMLElement;
+}
+
 // =============================================================================
 // Render Hook Types
 // =============================================================================
@@ -173,8 +193,8 @@ export interface ThemeConfig {
  *   date: 'YYYY-MM-DD',
  *   dateTime: 'YYYY-MM-DD HH:mm',
  *   time: 'HH:mm',
- *   monthHeader: 'YYYY年 M月',
- *   dayHeader: 'YYYY年M月D日'
+ *   monthHeader: 'YYYY M',
+ *   dayHeader: 'YYYY M D'
  * }
  * ```
  *
@@ -184,8 +204,8 @@ export interface ThemeConfig {
  *   date: 'yyyy-MM-dd',
  *   dateTime: 'yyyy-MM-dd HH:mm',
  *   time: 'HH:mm',
- *   monthHeader: 'yyyy年 M月',
- *   dayHeader: 'yyyy年M月d日'
+ *   monthHeader: 'YYYY M',
+ *   dayHeader: 'YYYY M D'
  * }
  * ```
  */
@@ -196,9 +216,9 @@ export interface DateFormatConfig {
   dateTime: string;
   /** Time format (default: 'HH:mm') */
   time: string;
-  /** Month view header format (default: 'YYYY年 M月' for Day.js, 'yyyy年 M月' for date-fns) */
+  /** Month view header format (default: 'YYYY M' for Day.js, 'YYYY M' for date-fns) */
   monthHeader: string;
-  /** Day view header format (default: 'YYYY年M月D日' for Day.js, 'yyyy年M月d日' for date-fns) */
+  /** Day view header format (default: 'YYYY M D' for Day.js, 'YYYY M D' for date-fns) */
   dayHeader: string;
 }
 
@@ -295,7 +315,7 @@ export interface CalendarConfig {
   /**
    * Custom header title format strings (deprecated, use dateFormats instead)
    * @deprecated Use dateFormats.monthHeader and dateFormats.dayHeader instead
-   * Default uses Day.js tokens: { month: 'YYYY年 M月', day: 'YYYY年M月D日' }
+   * Default uses Day.js tokens: { month: 'YYYY M', day: 'YYYY M D' }
    * Note: Format tokens depend on the dateAdapter being used (Day.js vs date-fns)
    */
   headerFormat?: {
@@ -306,6 +326,10 @@ export interface CalendarConfig {
   };
   /** Callback when an event is clicked */
   onEventClick?: (event: CalendarEvent) => void;
+  /** Callback when an event is double-clicked */
+  onEventDoubleClick?: (event: CalendarEvent) => void;
+  /** Callback when an event is right-clicked */
+  onEventContextMenu?: (event: CalendarEvent, x: number, y: number) => void;
   /** Callback when an event is dropped after dragging */
   onEventDrop?: (
     event: CalendarEvent,
@@ -316,6 +340,22 @@ export interface CalendarConfig {
   onViewChange?: (viewType: ViewType) => void;
   /** Callback when navigating to a different date */
   onDateChange?: (date: string) => void;
+  /** Callback when a date cell is clicked (month view) */
+  onDateClick?: (date: string) => void;
+  /** Callback when a date cell is double-clicked (month view) */
+  onDateDoubleClick?: (date: string) => void;
+  /** Callback when a date cell is right-clicked (month view) */
+  onDateContextMenu?: (date: string, x: number, y: number) => void;
+  /** Callback when a time slot is clicked (week/day view) */
+  onTimeSlotClick?: (dateTime: string) => void;
+  /** Callback when a time slot is double-clicked (week/day view) */
+  onTimeSlotDoubleClick?: (dateTime: string) => void;
+  /** Callback when a time slot is right-clicked (week/day view) */
+  onTimeSlotContextMenu?: (dateTime: string, x: number, y: number) => void;
+  /** Callback when a date range is selected by dragging (month view) */
+  onDateRangeSelect?: (startDate: string, endDate: string) => void;
+  /** Callback when a time range is selected by dragging (week/day view) */
+  onTimeRangeSelect?: (startDateTime: string, endDateTime: string) => void;
   /** Hook to customize date cell rendering */
   onRenderDateCell?: (ctx: DateCellContext) => void;
   /** Hook to customize event styling */
@@ -338,6 +378,8 @@ export interface ResolvedCalendarConfig {
     day: string;
   };
   onEventClick?: (event: CalendarEvent) => void;
+  onEventDoubleClick?: (event: CalendarEvent) => void;
+  onEventContextMenu?: (event: CalendarEvent, x: number, y: number) => void;
   onEventDrop?: (
     event: CalendarEvent,
     newStart: string,
@@ -345,6 +387,14 @@ export interface ResolvedCalendarConfig {
   ) => void;
   onViewChange?: (viewType: ViewType) => void;
   onDateChange?: (date: string) => void;
+  onDateClick?: (date: string) => void;
+  onDateDoubleClick?: (date: string) => void;
+  onDateContextMenu?: (date: string, x: number, y: number) => void;
+  onTimeSlotClick?: (dateTime: string) => void;
+  onTimeSlotDoubleClick?: (dateTime: string) => void;
+  onTimeSlotContextMenu?: (dateTime: string, x: number, y: number) => void;
+  onDateRangeSelect?: (startDate: string, endDate: string) => void;
+  onTimeRangeSelect?: (startDateTime: string, endDateTime: string) => void;
   onRenderDateCell?: (ctx: DateCellContext) => void;
   onStyleEvent?: (event: CalendarEvent) => EventStyle;
 }

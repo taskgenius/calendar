@@ -35,8 +35,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `dateFormats.date`: Date format for internal rendering (default: "YYYY-MM-DD")
   - `dateFormats.dateTime`: Date-time format for events (default: "YYYY-MM-DD HH:mm")
   - `dateFormats.time`: Time format for time displays (default: "HH:mm")
-  - `dateFormats.monthHeader`: Month view header format (default: "YYYY年 M月")
-  - `dateFormats.dayHeader`: Day view header format (default: "YYYY年M月D日")
+  - `dateFormats.monthHeader`: Month view header format (default: "YYYY M")
+  - `dateFormats.dayHeader`: Day view header format (default: "YYYY M D")
   - Supports Day.js (`YYYY`, `DD`) and date-fns (`yyyy`, `dd`) format tokens
   - Display formats are fully customizable while maintaining stable ISO format for APIs
 
@@ -92,16 +92,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 // Before (deprecated but still works)
 new Calendar('#app', {
   headerFormat: {
-    month: 'YYYY年 M月',
-    day: 'YYYY年M月D日'
+    month: 'YYYY年 M',
+    day: 'YYYY M D'
   }
 });
 
 // After (recommended)
 new Calendar('#app', {
   dateFormats: {
-    monthHeader: 'YYYY年 M月',
-    dayHeader: 'YYYY年M月D日',
+    monthHeader: 'YYYY M',
+    dayHeader: 'YYYY M D',
     // Optionally customize other formats
     date: 'YYYY/MM/DD',
     time: 'HH:mm'
@@ -114,8 +114,8 @@ new Calendar('#app', {
 ### ✨ Features
 
 - **Custom Header Format**: Add `headerFormat` configuration option to customize calendar header title formats for month and day views
-  - `headerFormat.month`: Custom format for month/week view headers (default: "YYYY年 M月")
-  - `headerFormat.day`: Custom format for day view headers (default: "YYYY年M月D日")
+  - `headerFormat.month`: Custom format for month/week view headers (default: "YYYY M")
+  - `headerFormat.day`: Custom format for day view headers (default: "YYYY M D")
   - Format tokens depend on the date adapter being used (Day.js, date-fns, or native)
 
 ### 🧪 Testing

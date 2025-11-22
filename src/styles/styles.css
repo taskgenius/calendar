@@ -371,3 +371,57 @@
     overflow: hidden;
     text-overflow: ellipsis;
 }
+
+/* ========================================================================== */
+/* Range Selection Styles */
+/* ========================================================================== */
+
+/* Disable text selection during range selection */
+.tg-calendar.tg-selecting {
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+}
+
+/* Range preview for month view (cell highlight) */
+.tg-month-cell.tg-range-preview {
+    background-color: rgba(var(--tg-primary-rgb), 0.15);
+    position: relative;
+}
+
+.tg-month-cell.tg-range-preview::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border: 2px solid rgba(var(--tg-primary-rgb), 0.4);
+    pointer-events: none;
+    box-sizing: border-box;
+}
+
+/* Range preview for time view (overlay element) */
+.tg-time-range-preview {
+    position: absolute;
+    background-color: rgba(var(--tg-primary-rgb), 0.15);
+    border: 2px dashed rgba(var(--tg-primary-rgb), 0.8);
+    pointer-events: none;
+    z-index: 15;
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+
+/* Column-level range preview for multi-day selection */
+.tg-day-column.tg-range-preview {
+    background-color: rgba(var(--tg-primary-rgb), 0.08);
+    position: relative;
+}
+
+.tg-day-column.tg-range-preview::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-left: 3px solid rgba(var(--tg-primary-rgb), 0.5);
+    border-right: 3px solid rgba(var(--tg-primary-rgb), 0.5);
+    pointer-events: none;
+    box-sizing: border-box;
+}

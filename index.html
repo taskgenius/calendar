@@ -1,687 +1,1051 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JS日历 - 堆叠布局修复版</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/dayjs/1.11.10/dayjs.min.js"></script>
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>JS日历 - 堆叠布局修复版</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/dayjs/1.11.10/dayjs.min.js"></script>
 
-    <style>
-        body { -webkit-font-smoothing: antialiased; user-select: none; overflow-x: hidden; }
+        <style>
+            body {
+                -webkit-font-smoothing: antialiased;
+                user-select: none;
+                overflow-x: hidden;
+            }
 
-        /* --- 公共样式 --- */
-        .view-container { min-height: 600px; background: white; }
+            /* --- 公共样式 --- */
+            .view-container {
+                min-height: 600px;
+                background: white;
+            }
 
-        /* --- 月视图样式 --- */
-        .month-row { position: relative; height: 120px; border-bottom: 1px solid #e5e7eb; }
-        .month-cell { height: 100%; border-right: 1px solid #e5e7eb; position: relative; z-index: 1; }
-        .month-cell:last-child { border-right: none; }
+            /* --- 月视图样式 --- */
+            .month-row {
+                position: relative;
+                height: 120px;
+                border-bottom: 1px solid #e5e7eb;
+            }
+            .month-cell {
+                height: 100%;
+                border-right: 1px solid #e5e7eb;
+                position: relative;
+                z-index: 1;
+            }
+            .month-cell:last-child {
+                border-right: none;
+            }
 
-        /* --- 周/日视图样式 --- */
-        .time-grid-container { display: flex; flex-direction: column; height: 600px; overflow-y: auto; position: relative; scroll-behavior: auto; }
-        .time-header { display: flex; border-bottom: 1px solid #e5e7eb; position: sticky; top: 0; background: white; z-index: 30; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
-        .time-header-cell { flex: 1; text-align: center; padding: 8px; border-right: 1px solid #f3f4f6; font-size: 14px; }
-        .time-body { display: flex; position: relative; min-height: 1440px; /* 24h * 60px */ }
+            /* --- 周/日视图样式 --- */
+            .time-grid-container {
+                display: flex;
+                flex-direction: column;
+                height: 600px;
+                overflow-y: auto;
+                position: relative;
+                scroll-behavior: auto;
+            }
+            .time-header {
+                display: flex;
+                border-bottom: 1px solid #e5e7eb;
+                position: sticky;
+                top: 0;
+                background: white;
+                z-index: 30;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+            }
+            .time-header-cell {
+                flex: 1;
+                text-align: center;
+                padding: 8px;
+                border-right: 1px solid #f3f4f6;
+                font-size: 14px;
+            }
+            .time-body {
+                display: flex;
+                position: relative;
+                min-height: 1440px; /* 24h * 60px */
+            }
 
-        /* 左侧时间轴 */
-        .time-axis { width: 60px; flex-shrink: 0; background: #fafafa; border-right: 1px solid #e5e7eb; position: sticky; left: 0; z-index: 20; }
-        .time-axis-label { height: 60px; position: absolute; width: 100%; text-align: right; padding-right: 8px; color: #9ca3af; font-size: 11px; top: -6px; pointer-events: none; }
+            /* 左侧时间轴 */
+            .time-axis {
+                width: 60px;
+                flex-shrink: 0;
+                background: #fafafa;
+                border-right: 1px solid #e5e7eb;
+                position: sticky;
+                left: 0;
+                z-index: 20;
+            }
+            .time-axis-label {
+                height: 60px;
+                position: absolute;
+                width: 100%;
+                text-align: right;
+                padding-right: 8px;
+                color: #9ca3af;
+                font-size: 11px;
+                top: -6px;
+                pointer-events: none;
+            }
 
-        /* 垂直列 */
-        .day-column { flex: 1; position: relative; border-right: 1px solid #e5e7eb; background:  repeating-linear-gradient(to bottom, transparent 0, transparent 59px, #f3f4f6 60px); }
+            /* 垂直列 */
+            .day-column {
+                flex: 1;
+                position: relative;
+                border-right: 1px solid #e5e7eb;
+                background: repeating-linear-gradient(
+                    to bottom,
+                    transparent 0,
+                    transparent 59px,
+                    #f3f4f6 60px
+                );
+            }
 
-        /* --- 事件卡片样式 --- */
-        /* 通用 */
-        .event-base {
-            position: absolute; border-radius: 4px; padding: 2px 6px; font-size: 12px; color: white;
-            cursor: grab; z-index: 10; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.1); transition: opacity 0.2s, transform 0.1s;
-        }
-        .event-base:active { cursor: grabbing; }
-        .event-base.is-dragging-source { opacity: 0.3; filter: grayscale(0.3); }
+            /* --- 事件卡片样式 --- */
+            /* 通用 */
+            .event-base {
+                position: absolute;
+                border-radius: 4px;
+                padding: 2px 6px;
+                font-size: 12px;
+                color: white;
+                cursor: grab;
+                z-index: 10;
+                overflow: hidden;
+                white-space: nowrap;
+                text-overflow: ellipsis;
+                box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+                transition:
+                    opacity 0.2s,
+                    transform 0.1s;
+            }
+            .event-base:active {
+                cursor: grabbing;
+            }
+            .event-base.is-dragging-source {
+                opacity: 0.3;
+                filter: grayscale(0.3);
+            }
 
-        /* 月视图横向条 */
-        .event-bar { height: 26px; line-height: 26px; }
+            /* 月视图横向条 */
+            .event-bar {
+                height: 26px;
+                line-height: 26px;
+            }
 
-        /* 周视图垂直块 */
-        .event-block {
-            /* width 和 left 现在由 JS 动态计算，这里只保留基础 flex 布局 */
-            display: flex; flex-direction: column; justify-content: flex-start;
-            line-height: 1.3; padding-top: 4px;
-            border: 1px solid rgba(255,255,255,0.3); /* 增加一点边框区分重叠 */
-        }
-        .event-block .time-text { font-size: 10px; opacity: 0.9; margin-bottom: 0px; }
+            /* 周视图垂直块 */
+            .event-block {
+                /* width 和 left 现在由 JS 动态计算，这里只保留基础 flex 布局 */
+                display: flex;
+                flex-direction: column;
+                justify-content: flex-start;
+                line-height: 1.3;
+                padding-top: 4px;
+                border: 1px solid rgba(255, 255, 255, 0.3); /* 增加一点边框区分重叠 */
+            }
+            .event-block .time-text {
+                font-size: 10px;
+                opacity: 0.9;
+                margin-bottom: 0px;
+            }
 
-        /* 调整大小把手 */
-        .resize-handle { position: absolute; z-index: 20; opacity: 0; transition: opacity 0.2s; }
-        .event-base:hover .resize-handle { opacity: 1; }
-        .resize-handle:hover { background-color: rgba(255,255,255,0.4); }
+            /* 调整大小把手 */
+            .resize-handle {
+                position: absolute;
+                z-index: 20;
+                opacity: 0;
+                transition: opacity 0.2s;
+            }
+            .event-base:hover .resize-handle {
+                opacity: 1;
+            }
+            .resize-handle:hover {
+                background-color: rgba(255, 255, 255, 0.4);
+            }
 
-        /* 月视图左右把手 */
-        .resize-h { top: 0; bottom: 0; width: 12px; cursor: col-resize; }
-        .resize-h.left { left: 0; }
-        .resize-h.right { right: 0; }
+            /* 月视图左右把手 */
+            .resize-h {
+                top: 0;
+                bottom: 0;
+                width: 12px;
+                cursor: col-resize;
+            }
+            .resize-h.left {
+                left: 0;
+            }
+            .resize-h.right {
+                right: 0;
+            }
 
-        /* 周视图底部把手 */
-        .resize-v { bottom: 0; left: 0; right: 0; height: 8px; cursor: row-resize; }
+            /* 周视图底部把手 */
+            .resize-v {
+                bottom: 0;
+                left: 0;
+                right: 0;
+                height: 8px;
+                cursor: row-resize;
+            }
 
-        /* --- 幽灵元素 --- */
-        .ghost-event {
-            position: absolute; background-color: rgba(59, 130, 246, 0.15);
-            border: 2px dashed rgba(59, 130, 246, 0.8); border-radius: 4px; z-index: 5; pointer-events: none;
-            box-sizing: border-box;
-        }
+            /* --- 幽灵元素 --- */
+            .ghost-event {
+                position: absolute;
+                background-color: rgba(59, 130, 246, 0.15);
+                border: 2px dashed rgba(59, 130, 246, 0.8);
+                border-radius: 4px;
+                z-index: 5;
+                pointer-events: none;
+                box-sizing: border-box;
+            }
 
-        /* --- 拖拽代理 --- */
-        #drag-proxy {
-            position: fixed; pointer-events: none; z-index: 9999;
-            box-shadow: 0 12px 24px rgba(0,0,0,0.2); border-radius: 4px;
-            visibility: hidden; opacity: 0.9; transform-origin: top left;
-        }
-    </style>
-</head>
-<body class="bg-gray-100 font-sans text-slate-800">
+            /* --- 拖拽代理 --- */
+            #drag-proxy {
+                position: fixed;
+                pointer-events: none;
+                z-index: 9999;
+                box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
+                border-radius: 4px;
+                visibility: hidden;
+                opacity: 0.9;
+                transform-origin: top left;
+            }
+        </style>
+    </head>
+    <body class="bg-gray-100 font-sans text-slate-800">
+        <div
+            id="app"
+            class="min-h-screen p-4 md:p-8 flex flex-col items-center"
+        ></div>
 
-    <div id="app" class="min-h-screen p-4 md:p-8 flex flex-col items-center"></div>
+        <!-- 拖拽代理容器 -->
+        <div id="drag-proxy"></div>
 
-    <!-- 拖拽代理容器 -->
-    <div id="drag-proxy"></div>
+        <script>
+            // ==================================================================================
+            //  1. 数据与状态管理
+            // ==================================================================================
+            const state = {
+                currentView: "week",
+                currentDate: dayjs(),
+                // 添加一些测试重叠的数据
+                events: [
+                    {
+                        id: "1",
+                        title: "冲刺会议",
+                        start: dayjs()
+                            .startOf("week")
+                            .add(1, "day")
+                            .hour(10)
+                            .minute(0)
+                            .format("YYYY-MM-DD HH:mm"),
+                        end: dayjs()
+                            .startOf("week")
+                            .add(1, "day")
+                            .hour(11)
+                            .minute(30)
+                            .format("YYYY-MM-DD HH:mm"),
+                        color: "bg-blue-500",
+                        rawColor: "#3b82f6",
+                    },
+                    // 故意制造冲突
+                    {
+                        id: "1-2",
+                        title: "技术评审",
+                        start: dayjs()
+                            .startOf("week")
+                            .add(1, "day")
+                            .hour(10)
+                            .minute(30)
+                            .format("YYYY-MM-DD HH:mm"),
+                        end: dayjs()
+                            .startOf("week")
+                            .add(1, "day")
+                            .hour(12)
+                            .minute(0)
+                            .format("YYYY-MM-DD HH:mm"),
+                        color: "bg-indigo-500",
+                        rawColor: "#6366f1",
+                    },
 
-    <script>
-        // ==================================================================================
-        //  1. 数据与状态管理
-        // ==================================================================================
-        const state = {
-            currentView: 'week',
-            currentDate: dayjs(),
-            // 添加一些测试重叠的数据
-            events: [
-                { id: '1', title: '冲刺会议', start: dayjs().startOf('week').add(1, 'day').hour(10).minute(0).format('YYYY-MM-DD HH:mm'), end: dayjs().startOf('week').add(1, 'day').hour(11).minute(30).format('YYYY-MM-DD HH:mm'), color: 'bg-blue-500', rawColor: '#3b82f6' },
-                // 故意制造冲突
-                { id: '1-2', title: '技术评审', start: dayjs().startOf('week').add(1, 'day').hour(10).minute(30).format('YYYY-MM-DD HH:mm'), end: dayjs().startOf('week').add(1, 'day').hour(12).minute(0).format('YYYY-MM-DD HH:mm'), color: 'bg-indigo-500', rawColor: '#6366f1' },
+                    {
+                        id: "2",
+                        title: "长项目 (跨天)",
+                        start: dayjs()
+                            .startOf("week")
+                            .subtract(1, "day")
+                            .format("YYYY-MM-DD HH:mm"),
+                        end: dayjs()
+                            .startOf("week")
+                            .add(2, "day")
+                            .format("YYYY-MM-DD HH:mm"),
+                        color: "bg-purple-500",
+                        rawColor: "#a855f7",
+                    },
+                    {
+                        id: "3",
+                        title: "午餐",
+                        start: dayjs()
+                            .startOf("week")
+                            .add(2, "day")
+                            .hour(12)
+                            .minute(0)
+                            .format("YYYY-MM-DD HH:mm"),
+                        end: dayjs()
+                            .startOf("week")
+                            .add(2, "day")
+                            .hour(13)
+                            .minute(0)
+                            .format("YYYY-MM-DD HH:mm"),
+                        color: "bg-green-500",
+                        rawColor: "#22c55e",
+                    },
+                    {
+                        id: "4",
+                        title: "代码评审",
+                        start: dayjs()
+                            .startOf("week")
+                            .add(3, "day")
+                            .hour(14)
+                            .minute(0)
+                            .format("YYYY-MM-DD HH:mm"),
+                        end: dayjs()
+                            .startOf("week")
+                            .add(3, "day")
+                            .hour(16)
+                            .minute(0)
+                            .format("YYYY-MM-DD HH:mm"),
+                        color: "bg-red-500",
+                        rawColor: "#ef4444",
+                    },
+                    {
+                        id: "5",
+                        title: "周五总结",
+                        start: dayjs()
+                            .startOf("week")
+                            .add(5, "day")
+                            .hour(16)
+                            .minute(0)
+                            .format("YYYY-MM-DD HH:mm"),
+                        end: dayjs()
+                            .startOf("week")
+                            .add(5, "day")
+                            .hour(17)
+                            .minute(0)
+                            .format("YYYY-MM-DD HH:mm"),
+                        color: "bg-orange-500",
+                        rawColor: "#f97316",
+                    },
+                ],
+            };
 
-                { id: '2', title: '长项目 (跨天)', start: dayjs().startOf('week').subtract(1, 'day').format('YYYY-MM-DD HH:mm'), end: dayjs().startOf('week').add(2, 'day').format('YYYY-MM-DD HH:mm'), color: 'bg-purple-500', rawColor: '#a855f7' },
-                { id: '3', title: '午餐', start: dayjs().startOf('week').add(2, 'day').hour(12).minute(0).format('YYYY-MM-DD HH:mm'), end: dayjs().startOf('week').add(2, 'day').hour(13).minute(0).format('YYYY-MM-DD HH:mm'), color: 'bg-green-500', rawColor: '#22c55e' },
-                { id: '4', title: '代码评审', start: dayjs().startOf('week').add(3, 'day').hour(14).minute(0).format('YYYY-MM-DD HH:mm'), end: dayjs().startOf('week').add(3, 'day').hour(16).minute(0).format('YYYY-MM-DD HH:mm'), color: 'bg-red-500', rawColor: '#ef4444' },
-                { id: '5', title: '周五总结', start: dayjs().startOf('week').add(5, 'day').hour(16).minute(0).format('YYYY-MM-DD HH:mm'), end: dayjs().startOf('week').add(5, 'day').hour(17).minute(0).format('YYYY-MM-DD HH:mm'), color: 'bg-orange-500', rawColor: '#f97316' },
-            ]
-        };
-
-        // 辅助工具
-        const Utils = {
-            isTimeBlockEvent: (e) => {
-                const s = dayjs(e.start);
-                const end = dayjs(e.end);
-                return s.isSame(end, 'day');
-            },
-            getCellHeight: () => 60, // 60px per hour
-        };
-
-        // ==================================================================================
-        //  2. 核心引擎：布局计算 (重点更新 calculateTimeLayout)
-        // ==================================================================================
-        const CalendarEngine = {
-            generateMonthGrid: (date) => {
-                const start = date.startOf('month').startOf('week');
-                const end = date.endOf('month').endOf('week');
-                const weeks = [];
-                let curr = start;
-                while (curr.isBefore(end)) {
-                    const days = [];
-                    for(let i=0; i<7; i++) {
-                        days.push({ date: curr, dateStr: curr.format('YYYY-MM-DD') });
-                        curr = curr.add(1, 'day');
-                    }
-                    weeks.push(days);
-                }
-                return weeks;
-            },
-
-            generateTimeColumns: (date, viewType) => {
-                const days = [];
-                if (viewType === 'day') {
-                    days.push({ date: date, dateStr: date.format('YYYY-MM-DD') });
-                } else {
-                    let curr = date.startOf('week');
-                    for(let i=0; i<7; i++) {
-                        days.push({ date: curr, dateStr: curr.format('YYYY-MM-DD') });
-                        curr = curr.add(1, 'day');
-                    }
-                }
-                return days;
-            },
-
-            // [修复] 支持重叠堆叠算法
-            calculateTimeLayout: (events, dateStr) => {
-                // 1. 筛选并预计算几何信息
-                let dayEvents = events.filter(e => {
-                    const s = dayjs(e.start);
-                    return s.format('YYYY-MM-DD') === dateStr && Utils.isTimeBlockEvent(e);
-                }).map(e => {
+            // 辅助工具
+            const Utils = {
+                isTimeBlockEvent: (e) => {
                     const s = dayjs(e.start);
                     const end = dayjs(e.end);
-                    const startMin = s.hour() * 60 + s.minute();
-                    // 简单处理：在单日视图中不考虑跨天结束的复杂情况，只取分钟差
-                    const duration = end.diff(s, 'minute');
-                    const endMin = startMin + duration;
+                    return s.isSame(end, "day");
+                },
+                getCellHeight: () => 60, // 60px per hour
+            };
 
-                    const top = startMin * (Utils.getCellHeight() / 60);
-                    const height = Math.max(20, duration * (Utils.getCellHeight() / 60));
-
-                    return {
-                        origin: e,
-                        top,
-                        height,
-                        startMin,
-                        endMin,
-                        // 默认值
-                        widthPercent: 100,
-                        leftPercent: 0
-                    };
-                });
-
-                if (dayEvents.length === 0) return [];
-
-                // 2. 按开始时间排序
-                dayEvents.sort((a, b) => a.startMin - b.startMin || b.endMin - a.endMin);
-
-                // 3. 分组 (Cluster): 将有重叠的事件归为一组
-                const groups = [];
-                let currentGroup = [dayEvents[0]];
-                let groupEnd = dayEvents[0].endMin;
-
-                for (let i = 1; i < dayEvents.length; i++) {
-                    const ev = dayEvents[i];
-                    // 如果当前事件开始时间 小于 组的结束时间，说明有重叠（或属于同一连通分量）
-                    if (ev.startMin < groupEnd) {
-                        currentGroup.push(ev);
-                        groupEnd = Math.max(groupEnd, ev.endMin);
-                    } else {
-                        // 无重叠，封存上一组，开启新组
-                        groups.push(currentGroup);
-                        currentGroup = [ev];
-                        groupEnd = ev.endMin;
+            // ==================================================================================
+            //  2. 核心引擎：布局计算 (重点更新 calculateTimeLayout)
+            // ==================================================================================
+            const CalendarEngine = {
+                generateMonthGrid: (date) => {
+                    const start = date.startOf("month").startOf("week");
+                    const end = date.endOf("month").endOf("week");
+                    const weeks = [];
+                    let curr = start;
+                    while (curr.isBefore(end)) {
+                        const days = [];
+                        for (let i = 0; i < 7; i++) {
+                            days.push({
+                                date: curr,
+                                dateStr: curr.format("YYYY-MM-DD"),
+                            });
+                            curr = curr.add(1, "day");
+                        }
+                        weeks.push(days);
                     }
-                }
-                groups.push(currentGroup);
+                    return weeks;
+                },
 
-                // 4. 组内布局 (Packing): 计算每列位置
-                groups.forEach(group => {
-                    // columns数组存储每一列最后一个事件的结束时间
-                    const columns = [];
+                generateTimeColumns: (date, viewType) => {
+                    const days = [];
+                    if (viewType === "day") {
+                        days.push({
+                            date: date,
+                            dateStr: date.format("YYYY-MM-DD"),
+                        });
+                    } else {
+                        let curr = date.startOf("week");
+                        for (let i = 0; i < 7; i++) {
+                            days.push({
+                                date: curr,
+                                dateStr: curr.format("YYYY-MM-DD"),
+                            });
+                            curr = curr.add(1, "day");
+                        }
+                    }
+                    return days;
+                },
 
-                    group.forEach(ev => {
-                        let placed = false;
-                        // 尝试放入现有的列
-                        for (let i = 0; i < columns.length; i++) {
-                            if (columns[i] <= ev.startMin) {
-                                columns[i] = ev.endMin;
-                                ev.colIndex = i;
-                                placed = true;
+                // [修复] 支持重叠堆叠算法
+                calculateTimeLayout: (events, dateStr) => {
+                    // 1. 筛选并预计算几何信息
+                    let dayEvents = events
+                        .filter((e) => {
+                            const s = dayjs(e.start);
+                            return (
+                                s.format("YYYY-MM-DD") === dateStr &&
+                                Utils.isTimeBlockEvent(e)
+                            );
+                        })
+                        .map((e) => {
+                            const s = dayjs(e.start);
+                            const end = dayjs(e.end);
+                            const startMin = s.hour() * 60 + s.minute();
+                            // 简单处理：在单日视图中不考虑跨天结束的复杂情况，只取分钟差
+                            const duration = end.diff(s, "minute");
+                            const endMin = startMin + duration;
+
+                            const top = startMin * (Utils.getCellHeight() / 60);
+                            const height = Math.max(
+                                20,
+                                duration * (Utils.getCellHeight() / 60),
+                            );
+
+                            return {
+                                origin: e,
+                                top,
+                                height,
+                                startMin,
+                                endMin,
+                                // 默认值
+                                widthPercent: 100,
+                                leftPercent: 0,
+                            };
+                        });
+
+                    if (dayEvents.length === 0) return [];
+
+                    // 2. 按开始时间排序
+                    dayEvents.sort(
+                        (a, b) =>
+                            a.startMin - b.startMin || b.endMin - a.endMin,
+                    );
+
+                    // 3. 分组 (Cluster): 将有重叠的事件归为一组
+                    const groups = [];
+                    let currentGroup = [dayEvents[0]];
+                    let groupEnd = dayEvents[0].endMin;
+
+                    for (let i = 1; i < dayEvents.length; i++) {
+                        const ev = dayEvents[i];
+                        // 如果当前事件开始时间 小于 组的结束时间，说明有重叠（或属于同一连通分量）
+                        if (ev.startMin < groupEnd) {
+                            currentGroup.push(ev);
+                            groupEnd = Math.max(groupEnd, ev.endMin);
+                        } else {
+                            // 无重叠，封存上一组，开启新组
+                            groups.push(currentGroup);
+                            currentGroup = [ev];
+                            groupEnd = ev.endMin;
+                        }
+                    }
+                    groups.push(currentGroup);
+
+                    // 4. 组内布局 (Packing): 计算每列位置
+                    groups.forEach((group) => {
+                        // columns数组存储每一列最后一个事件的结束时间
+                        const columns = [];
+
+                        group.forEach((ev) => {
+                            let placed = false;
+                            // 尝试放入现有的列
+                            for (let i = 0; i < columns.length; i++) {
+                                if (columns[i] <= ev.startMin) {
+                                    columns[i] = ev.endMin;
+                                    ev.colIndex = i;
+                                    placed = true;
+                                    break;
+                                }
+                            }
+                            // 如果放不下，开辟新列
+                            if (!placed) {
+                                columns.push(ev.endMin);
+                                ev.colIndex = columns.length - 1;
+                            }
+                        });
+
+                        // 5. 应用宽度和偏移
+                        const numCols = columns.length;
+                        group.forEach((ev) => {
+                            ev.widthPercent = 100 / numCols;
+                            ev.leftPercent = ev.colIndex * ev.widthPercent;
+                        });
+                    });
+
+                    return dayEvents;
+                },
+
+                calculateMonthLayout: (events, weekStart, weekEnd) => {
+                    const weekEvents = events.filter((e) => {
+                        return (
+                            !dayjs(e.end).isBefore(weekStart) &&
+                            !dayjs(e.start).isAfter(weekEnd)
+                        );
+                    });
+
+                    const visualItems = weekEvents.map((e) => {
+                        const s = dayjs(e.start);
+                        const end = dayjs(e.end);
+                        const displayStart = s.isBefore(weekStart)
+                            ? weekStart
+                            : s;
+                        const displayEnd = end.isAfter(weekEnd) ? weekEnd : end;
+
+                        return {
+                            origin: e,
+                            startIdx: displayStart.diff(weekStart, "day"),
+                            span: displayEnd.diff(displayStart, "day") + 1,
+                            isStart: !s.isBefore(weekStart),
+                            isEnd: !end.isAfter(weekEnd),
+                        };
+                    });
+
+                    visualItems.sort(
+                        (a, b) => a.startIdx - b.startIdx || b.span - a.span,
+                    );
+                    const slots = [];
+                    visualItems.forEach((item) => {
+                        let i = 0;
+                        while (true) {
+                            if (!slots[i] || slots[i] < item.startIdx) {
+                                slots[i] = item.startIdx + item.span - 1;
+                                item.slot = i;
                                 break;
                             }
-                        }
-                        // 如果放不下，开辟新列
-                        if (!placed) {
-                            columns.push(ev.endMin);
-                            ev.colIndex = columns.length - 1;
+                            i++;
                         }
                     });
+                    return visualItems;
+                },
+            };
 
-                    // 5. 应用宽度和偏移
-                    const numCols = columns.length;
-                    group.forEach(ev => {
-                        ev.widthPercent = 100 / numCols;
-                        ev.leftPercent = ev.colIndex * ev.widthPercent;
-                    });
-                });
+            // ==================================================================================
+            //  3. 拖拽管理器
+            // ==================================================================================
+            const DragManager = {
+                state: null,
 
-                return dayEvents;
-            },
+                initMonthDrag(el, eventData, visualData, renderCallback) {
+                    el.onmousedown = (e) => {
+                        if (e.button !== 0) return;
+                        e.stopPropagation();
 
-            calculateMonthLayout: (events, weekStart, weekEnd) => {
-                const weekEvents = events.filter(e => {
-                    return !dayjs(e.end).isBefore(weekStart) && !dayjs(e.start).isAfter(weekEnd);
-                });
+                        const row = el.closest(".month-row");
+                        const cellW = row.offsetWidth / 7;
+                        let mode = "move";
+                        if (e.target.classList.contains("left"))
+                            mode = "resize-left";
+                        if (e.target.classList.contains("right"))
+                            mode = "resize-right";
 
-                const visualItems = weekEvents.map(e => {
-                    const s = dayjs(e.start);
-                    const end = dayjs(e.end);
-                    const displayStart = s.isBefore(weekStart) ? weekStart : s;
-                    const displayEnd = end.isAfter(weekEnd) ? weekEnd : end;
-
-                    return {
-                        origin: e,
-                        startIdx: displayStart.diff(weekStart, 'day'),
-                        span: displayEnd.diff(displayStart, 'day') + 1,
-                        isStart: !s.isBefore(weekStart),
-                        isEnd: !end.isAfter(weekEnd)
+                        this.startDrag({
+                            type: "month",
+                            mode,
+                            event: eventData,
+                            startX: e.clientX,
+                            startDate: dayjs(eventData.start),
+                            endDate: dayjs(eventData.end),
+                            cellW,
+                            renderCallback,
+                            clickOffsetDays: Math.floor(
+                                (e.clientX - el.getBoundingClientRect().left) /
+                                    cellW,
+                            ),
+                        });
                     };
-                });
+                },
 
-                visualItems.sort((a,b) => a.startIdx - b.startIdx || b.span - a.span);
-                const slots = [];
-                visualItems.forEach(item => {
-                    let i = 0;
-                    while(true) {
-                        if (!slots[i] || slots[i] < item.startIdx) {
-                            slots[i] = item.startIdx + item.span - 1;
-                            item.slot = i;
-                            break;
+                initTimeDrag(el, eventData, layoutData, renderCallback) {
+                    el.onmousedown = (e) => {
+                        if (e.button !== 0) return;
+                        e.stopPropagation();
+
+                        const col = el.closest(".day-column");
+                        const colRect = col.getBoundingClientRect();
+
+                        let mode = "move";
+                        if (e.target.classList.contains("resize-v"))
+                            mode = "resize-bottom";
+
+                        this.startDrag({
+                            type: "time",
+                            mode,
+                            event: eventData,
+                            startX: e.clientX,
+                            startY: e.clientY,
+                            startDate: dayjs(eventData.start),
+                            endDate: dayjs(eventData.end),
+                            colW: colRect.width,
+                            renderCallback,
+                            origStartMin:
+                                dayjs(eventData.start).hour() * 60 +
+                                dayjs(eventData.start).minute(),
+                            origDuration: dayjs(eventData.end).diff(
+                                dayjs(eventData.start),
+                                "minute",
+                            ),
+                        });
+                    };
+                },
+
+                startDrag(stateData) {
+                    this.state = stateData;
+                    document.body.style.cursor = "grabbing";
+                    document
+                        .querySelectorAll(`[data-eid="${stateData.event.id}"]`)
+                        .forEach((el) =>
+                            el.classList.add("is-dragging-source"),
+                        );
+
+                    const proxy = document.getElementById("drag-proxy");
+                    proxy.innerHTML = stateData.event.title;
+                    proxy.style.backgroundColor = stateData.event.rawColor;
+                    proxy.style.color = "white";
+                    proxy.style.padding = "4px 8px";
+                    proxy.style.fontSize = "12px";
+
+                    document.addEventListener("mousemove", this.onMove);
+                    document.addEventListener("mouseup", this.onUp);
+                },
+
+                onMove: (e) => {
+                    const self = DragManager;
+                    if (!self.state) return;
+                    const s = self.state;
+
+                    const proxy = document.getElementById("drag-proxy");
+                    proxy.style.visibility = "visible";
+                    proxy.style.left = e.clientX + 10 + "px";
+                    proxy.style.top = e.clientY + 10 + "px";
+                    proxy.style.transform = "none";
+
+                    if (s.type === "month") self.handleMonthMove(e, s);
+                    if (s.type === "time") self.handleTimeMove(e, s);
+                },
+
+                handleMonthMove(e, s) {
+                    const row = document
+                        .elementFromPoint(e.clientX, e.clientY)
+                        ?.closest(".month-row");
+                    if (!row) return;
+
+                    const rowStart = dayjs(row.dataset.date);
+                    const cellIdx = Math.floor(
+                        (e.clientX - row.getBoundingClientRect().left) /
+                            s.cellW,
+                    );
+                    const hoverDate = rowStart.add(
+                        Math.max(0, Math.min(6, cellIdx)),
+                        "day",
+                    );
+
+                    let newStart = s.startDate;
+                    let newEnd = s.endDate;
+
+                    if (s.mode === "move") {
+                        const duration = s.endDate.diff(s.startDate, "day");
+                        newStart = hoverDate;
+                        newEnd = newStart.add(duration, "day");
+                    } else if (s.mode === "resize-right") {
+                        newEnd = hoverDate;
+                        if (newEnd.isBefore(newStart)) newEnd = newStart;
+                    }
+
+                    DragManager.renderMonthGhost(newStart, newEnd);
+                    s.tentativeStart = newStart;
+                    s.tentativeEnd = newEnd;
+                },
+
+                handleTimeMove(e, s) {
+                    const col = document
+                        .elementFromPoint(e.clientX, e.clientY)
+                        ?.closest(".day-column");
+                    if (!col) return;
+
+                    const newDateBase = dayjs(col.dataset.date);
+                    const rect = col.getBoundingClientRect();
+
+                    const relY = e.clientY - rect.top;
+
+                    const rawMins = (relY / Utils.getCellHeight()) * 60;
+                    const snappedMins = Math.max(
+                        0,
+                        Math.min(1440, Math.round(rawMins / 15) * 15),
+                    );
+
+                    let newStart, newEnd;
+
+                    if (s.mode === "move") {
+                        newStart = newDateBase.hour(0).minute(snappedMins);
+                        newEnd = newStart.add(s.origDuration, "minute");
+                    } else if (s.mode === "resize-bottom") {
+                        newStart = s.startDate;
+                        if (newDateBase.isSame(s.startDate, "day")) {
+                            const endMins = Math.max(
+                                s.origStartMin + 15,
+                                snappedMins,
+                            );
+                            newEnd = newDateBase.hour(0).minute(endMins);
+                        } else {
+                            newEnd = s.endDate;
                         }
-                        i++;
                     }
-                });
-                return visualItems;
-            }
-        };
 
-        // ==================================================================================
-        //  3. 拖拽管理器
-        // ==================================================================================
-        const DragManager = {
-            state: null,
+                    DragManager.renderTimeGhost(newStart, newEnd);
+                    s.tentativeStart = newStart;
+                    s.tentativeEnd = newEnd;
+                },
 
-            initMonthDrag(el, eventData, visualData, renderCallback) {
-                el.onmousedown = (e) => {
-                    if (e.button !== 0) return;
-                    e.stopPropagation();
+                renderMonthGhost(start, end) {
+                    document
+                        .querySelectorAll(".ghost-event")
+                        .forEach((el) => el.remove());
+                    const rows = document.querySelectorAll(".month-row");
+                    rows.forEach((row) => {
+                        const rStart = dayjs(row.dataset.date);
+                        const rEnd = rStart.add(6, "day");
+                        if (!end.isBefore(rStart) && !start.isAfter(rEnd)) {
+                            const dStart = start.isBefore(rStart)
+                                ? rStart
+                                : start;
+                            const dEnd = end.isAfter(rEnd) ? rEnd : end;
+                            const left = dStart.diff(rStart, "day") * 14.2857;
+                            const width =
+                                (dEnd.diff(dStart, "day") + 1) * 14.2857;
 
-                    const row = el.closest('.month-row');
-                    const cellW = row.offsetWidth / 7;
-                    let mode = 'move';
-                    if (e.target.classList.contains('left')) mode = 'resize-left';
-                    if (e.target.classList.contains('right')) mode = 'resize-right';
-
-                    this.startDrag({
-                        type: 'month', mode, event: eventData,
-                        startX: e.clientX,
-                        startDate: dayjs(eventData.start),
-                        endDate: dayjs(eventData.end),
-                        cellW, renderCallback,
-                        clickOffsetDays: Math.floor((e.clientX - el.getBoundingClientRect().left) / cellW)
+                            const g = document.createElement("div");
+                            g.className = "ghost-event";
+                            g.style.left = left + "%";
+                            g.style.width = width + "%";
+                            g.style.top = "30px";
+                            g.style.height = "26px";
+                            row.appendChild(g);
+                        }
                     });
-                };
-            },
+                },
 
-            initTimeDrag(el, eventData, layoutData, renderCallback) {
-                el.onmousedown = (e) => {
-                    if (e.button !== 0) return;
-                    e.stopPropagation();
+                renderTimeGhost(start, end) {
+                    document
+                        .querySelectorAll(".ghost-event")
+                        .forEach((el) => el.remove());
 
-                    const col = el.closest('.day-column');
-                    const colRect = col.getBoundingClientRect();
+                    const dateStr = start.format("YYYY-MM-DD");
+                    const col = document.querySelector(
+                        `.day-column[data-date="${dateStr}"]`,
+                    );
+                    if (col) {
+                        const top =
+                            (start.hour() * 60 + start.minute()) *
+                            (Utils.getCellHeight() / 60);
+                        const h =
+                            end.diff(start, "minute") *
+                            (Utils.getCellHeight() / 60);
 
-                    let mode = 'move';
-                    if (e.target.classList.contains('resize-v')) mode = 'resize-bottom';
+                        const g = document.createElement("div");
+                        g.className = "ghost-event";
+                        g.style.top = top + "px";
+                        g.style.height = h + "px";
+                        // Ghost 保持全宽，表示占用的时间段
+                        g.style.width = "90%";
+                        g.style.left = "5%";
+                        g.innerText = `${start.format("HH:mm")} - ${end.format("HH:mm")}`;
+                        g.style.color = "#3b82f6";
+                        g.style.fontSize = "10px";
+                        g.style.padding = "2px";
+                        col.appendChild(g);
+                    }
+                },
 
-                    this.startDrag({
-                        type: 'time', mode, event: eventData,
-                        startX: e.clientX, startY: e.clientY,
-                        startDate: dayjs(eventData.start),
-                        endDate: dayjs(eventData.end),
-                        colW: colRect.width,
-                        renderCallback,
-                        origStartMin: dayjs(eventData.start).hour()*60 + dayjs(eventData.start).minute(),
-                        origDuration: dayjs(eventData.end).diff(dayjs(eventData.start), 'minute')
-                    });
-                };
-            },
+                onUp: (e) => {
+                    const self = DragManager;
+                    if (!self.state) return;
+                    const s = self.state;
 
-            startDrag(stateData) {
-                this.state = stateData;
-                document.body.style.cursor = 'grabbing';
-                document.querySelectorAll(`[data-eid="${stateData.event.id}"]`).forEach(el => el.classList.add('is-dragging-source'));
+                    document.body.style.cursor = "";
 
-                const proxy = document.getElementById('drag-proxy');
-                proxy.innerHTML = stateData.event.title;
-                proxy.style.backgroundColor = stateData.event.rawColor;
-                proxy.style.color = 'white';
-                proxy.style.padding = '4px 8px';
-                proxy.style.fontSize = '12px';
+                    document.getElementById("drag-proxy").style.visibility =
+                        "hidden";
+                    document
+                        .querySelectorAll(".ghost-event")
+                        .forEach((el) => el.remove());
+                    document
+                        .querySelectorAll(".is-dragging-source")
+                        .forEach((el) =>
+                            el.classList.remove("is-dragging-source"),
+                        );
+                    document.removeEventListener("mousemove", self.onMove);
+                    document.removeEventListener("mouseup", self.onUp);
 
-                document.addEventListener('mousemove', this.onMove);
-                document.addEventListener('mouseup', this.onUp);
-            },
+                    if (s.tentativeStart && s.tentativeEnd) {
+                        const target = state.events.find(
+                            (ev) => ev.id === s.event.id,
+                        );
+                        if (target) {
+                            target.start =
+                                s.tentativeStart.format("YYYY-MM-DD HH:mm");
+                            target.end =
+                                s.tentativeEnd.format("YYYY-MM-DD HH:mm");
+                        }
+                        s.renderCallback();
+                    }
+                    self.state = null;
+                },
+            };
 
-            onMove: (e) => {
-                const self = DragManager;
-                if (!self.state) return;
-                const s = self.state;
+            // ==================================================================================
+            //  4. 视图渲染
+            // ==================================================================================
+            const app = document.getElementById("app");
 
-                const proxy = document.getElementById('drag-proxy');
-                proxy.style.visibility = 'visible';
-                proxy.style.left = (e.clientX + 10) + 'px';
-                proxy.style.top = (e.clientY + 10) + 'px';
-                proxy.style.transform = 'none';
-
-                if (s.type === 'month') self.handleMonthMove(e, s);
-                if (s.type === 'time') self.handleTimeMove(e, s);
-            },
-
-            handleMonthMove(e, s) {
-                const row = document.elementFromPoint(e.clientX, e.clientY)?.closest('.month-row');
-                if (!row) return;
-
-                const rowStart = dayjs(row.dataset.date);
-                const cellIdx = Math.floor((e.clientX - row.getBoundingClientRect().left) / s.cellW);
-                const hoverDate = rowStart.add(Math.max(0, Math.min(6, cellIdx)), 'day');
-
-                let newStart = s.startDate;
-                let newEnd = s.endDate;
-
-                if (s.mode === 'move') {
-                    const duration = s.endDate.diff(s.startDate, 'day');
-                    newStart = hoverDate;
-                    newEnd = newStart.add(duration, 'day');
-                } else if (s.mode === 'resize-right') {
-                    newEnd = hoverDate;
-                    if (newEnd.isBefore(newStart)) newEnd = newStart;
+            function renderApp() {
+                // 保存滚动位置
+                let preservedScrollTop = null;
+                const existingScroll = document.querySelector(
+                    ".time-grid-container",
+                );
+                if (existingScroll) {
+                    preservedScrollTop = existingScroll.scrollTop;
                 }
 
-                DragManager.renderMonthGhost(newStart, newEnd);
-                s.tentativeStart = newStart;
-                s.tentativeEnd = newEnd;
-            },
+                app.innerHTML = "";
+                const container = document.createElement("div");
+                container.className =
+                    "w-full max-w-6xl bg-white rounded-xl shadow-xl border border-gray-200 flex flex-col overflow-hidden";
+                container.style.maxHeight = "90vh";
 
-            handleTimeMove(e, s) {
-                const col = document.elementFromPoint(e.clientX, e.clientY)?.closest('.day-column');
-                if (!col) return;
+                // --- Header ---
+                const header = document.createElement("div");
+                header.className =
+                    "flex justify-between items-center p-4 border-b border-gray-200 bg-white";
 
-                const newDateBase = dayjs(col.dataset.date);
-                const rect = col.getBoundingClientRect();
+                const title = document.createElement("h1");
+                title.className = "text-xl font-bold text-gray-800";
+                title.innerText = state.currentDate.format(
+                    state.currentView === "day" ? "YYYY M D" : "YYYY MMMM",
+                );
 
-                const relY = e.clientY - rect.top;
-
-                const rawMins = (relY / Utils.getCellHeight()) * 60;
-                const snappedMins = Math.max(0, Math.min(1440, Math.round(rawMins / 15) * 15));
-
-                let newStart, newEnd;
-
-                if (s.mode === 'move') {
-                    newStart = newDateBase.hour(0).minute(snappedMins);
-                    newEnd = newStart.add(s.origDuration, 'minute');
-                } else if (s.mode === 'resize-bottom') {
-                    newStart = s.startDate;
-                    if (newDateBase.isSame(s.startDate, 'day')) {
-                         const endMins = Math.max(s.origStartMin + 15, snappedMins);
-                         newEnd = newDateBase.hour(0).minute(endMins);
-                    } else {
-                        newEnd = s.endDate;
-                    }
-                }
-
-                DragManager.renderTimeGhost(newStart, newEnd);
-                s.tentativeStart = newStart;
-                s.tentativeEnd = newEnd;
-            },
-
-            renderMonthGhost(start, end) {
-                document.querySelectorAll('.ghost-event').forEach(el => el.remove());
-                const rows = document.querySelectorAll('.month-row');
-                rows.forEach(row => {
-                    const rStart = dayjs(row.dataset.date);
-                    const rEnd = rStart.add(6, 'day');
-                    if (!end.isBefore(rStart) && !start.isAfter(rEnd)) {
-                        const dStart = start.isBefore(rStart) ? rStart : start;
-                        const dEnd = end.isAfter(rEnd) ? rEnd : end;
-                        const left = dStart.diff(rStart, 'day') * 14.2857;
-                        const width = (dEnd.diff(dStart, 'day') + 1) * 14.2857;
-
-                        const g = document.createElement('div');
-                        g.className = 'ghost-event';
-                        g.style.left = left + '%';
-                        g.style.width = width + '%';
-                        g.style.top = '30px';
-                        g.style.height = '26px';
-                        row.appendChild(g);
-                    }
+                const viewSwitch = document.createElement("div");
+                viewSwitch.className = "flex bg-gray-100 p-1 rounded-lg";
+                ["month", "week", "day"].forEach((v) => {
+                    const btn = document.createElement("button");
+                    btn.className = `px-3 py-1 text-sm rounded-md transition ${state.currentView === v ? "bg-white shadow text-blue-600 font-medium" : "text-gray-500 hover:text-gray-700"}`;
+                    btn.innerText =
+                        v === "month" ? "Month" : v === "week" ? "Week" : "Day";
+                    btn.onclick = () => {
+                        state.currentView = v;
+                        renderApp();
+                    };
+                    viewSwitch.appendChild(btn);
                 });
-            },
 
-            renderTimeGhost(start, end) {
-                document.querySelectorAll('.ghost-event').forEach(el => el.remove());
-
-                const dateStr = start.format('YYYY-MM-DD');
-                const col = document.querySelector(`.day-column[data-date="${dateStr}"]`);
-                if (col) {
-                    const top = (start.hour()*60 + start.minute()) * (Utils.getCellHeight()/60);
-                    const h = end.diff(start, 'minute') * (Utils.getCellHeight()/60);
-
-                    const g = document.createElement('div');
-                    g.className = 'ghost-event';
-                    g.style.top = top + 'px';
-                    g.style.height = h + 'px';
-                    // Ghost 保持全宽，表示占用的时间段
-                    g.style.width = '90%';
-                    g.style.left = '5%';
-                    g.innerText = `${start.format('HH:mm')} - ${end.format('HH:mm')}`;
-                    g.style.color = '#3b82f6';
-                    g.style.fontSize = '10px';
-                    g.style.padding = '2px';
-                    col.appendChild(g);
-                }
-            },
-
-            onUp: (e) => {
-                const self = DragManager;
-                if (!self.state) return;
-                const s = self.state;
-
-                document.body.style.cursor = '';
-
-                document.getElementById('drag-proxy').style.visibility = 'hidden';
-                document.querySelectorAll('.ghost-event').forEach(el => el.remove());
-                document.querySelectorAll('.is-dragging-source').forEach(el => el.classList.remove('is-dragging-source'));
-                document.removeEventListener('mousemove', self.onMove);
-                document.removeEventListener('mouseup', self.onUp);
-
-                if (s.tentativeStart && s.tentativeEnd) {
-                    const target = state.events.find(ev => ev.id === s.event.id);
-                    if (target) {
-                        target.start = s.tentativeStart.format('YYYY-MM-DD HH:mm');
-                        target.end = s.tentativeEnd.format('YYYY-MM-DD HH:mm');
-                    }
-                    s.renderCallback();
-                }
-                self.state = null;
-            }
-        };
-
-        // ==================================================================================
-        //  4. 视图渲染
-        // ==================================================================================
-        const app = document.getElementById('app');
-
-        function renderApp() {
-            // 保存滚动位置
-            let preservedScrollTop = null;
-            const existingScroll = document.querySelector('.time-grid-container');
-            if (existingScroll) {
-                preservedScrollTop = existingScroll.scrollTop;
-            }
-
-            app.innerHTML = '';
-            const container = document.createElement('div');
-            container.className = "w-full max-w-6xl bg-white rounded-xl shadow-xl border border-gray-200 flex flex-col overflow-hidden";
-            container.style.maxHeight = "90vh";
-
-            // --- Header ---
-            const header = document.createElement('div');
-            header.className = "flex justify-between items-center p-4 border-b border-gray-200 bg-white";
-
-            const title = document.createElement('h1');
-            title.className = "text-xl font-bold text-gray-800";
-            title.innerText = state.currentDate.format(state.currentView === 'day' ? 'YYYY年M月D日' : 'YYYY年 MMMM');
-
-            const viewSwitch = document.createElement('div');
-            viewSwitch.className = "flex bg-gray-100 p-1 rounded-lg";
-            ['month', 'week', 'day'].forEach(v => {
-                const btn = document.createElement('button');
-                btn.className = `px-3 py-1 text-sm rounded-md transition ${state.currentView === v ? 'bg-white shadow text-blue-600 font-medium' : 'text-gray-500 hover:text-gray-700'}`;
-                btn.innerText = v === 'month' ? '月' : (v === 'week' ? '周' : '日');
-                btn.onclick = () => { state.currentView = v; renderApp(); };
-                viewSwitch.appendChild(btn);
-            });
-
-            const nav = document.createElement('div');
-            nav.className = "flex gap-2";
-            nav.innerHTML = `
+                const nav = document.createElement("div");
+                nav.className = "flex gap-2";
+                nav.innerHTML = `
                 <button onclick="moveDate(-1)" class="px-3 py-1 bg-gray-50 hover:bg-gray-100 rounded border text-sm">Previous</button>
                 <button onclick="resetDate()" class="px-3 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded border border-blue-100 text-sm">Today</button>
                 <button onclick="moveDate(1)" class="px-3 py-1 bg-gray-50 hover:bg-gray-100 rounded border text-sm">Next</button>
             `;
 
-            header.appendChild(title);
-            header.appendChild(viewSwitch);
-            header.appendChild(nav);
-            container.appendChild(header);
+                header.appendChild(title);
+                header.appendChild(viewSwitch);
+                header.appendChild(nav);
+                container.appendChild(header);
 
-            // --- View Body ---
-            const viewBody = document.createElement('div');
-            viewBody.className = "flex-1 overflow-hidden relative";
+                // --- View Body ---
+                const viewBody = document.createElement("div");
+                viewBody.className = "flex-1 overflow-hidden relative";
 
-            if (state.currentView === 'month') {
-                renderMonthView(viewBody);
-            } else {
-                renderTimeView(viewBody, preservedScrollTop);
+                if (state.currentView === "month") {
+                    renderMonthView(viewBody);
+                } else {
+                    renderTimeView(viewBody, preservedScrollTop);
+                }
+
+                container.appendChild(viewBody);
+                app.appendChild(container);
             }
 
-            container.appendChild(viewBody);
-            app.appendChild(container);
-        }
+            // --- 渲染月视图 ---
+            function renderMonthView(container) {
+                const head = document.createElement("div");
+                head.className = "grid grid-cols-7 border-b bg-gray-50";
+                ["日", "一", "二", "三", "四", "五", "六"].forEach(
+                    (d) =>
+                        (head.innerHTML += `<div class="py-2 text-center text-xs font-bold text-gray-400">${d}</div>`),
+                );
+                container.appendChild(head);
 
-        // --- 渲染月视图 ---
-        function renderMonthView(container) {
-            const head = document.createElement('div');
-            head.className = "grid grid-cols-7 border-b bg-gray-50";
-            ['日','一','二','三','四','五','六'].forEach(d => head.innerHTML += `<div class="py-2 text-center text-xs font-bold text-gray-400">${d}</div>`);
-            container.appendChild(head);
+                const body = document.createElement("div");
+                body.className = "overflow-y-auto h-[600px]";
 
-            const body = document.createElement('div');
-            body.className = "overflow-y-auto h-[600px]";
+                const weeks = CalendarEngine.generateMonthGrid(
+                    state.currentDate,
+                );
+                weeks.forEach((weekDays) => {
+                    const row = document.createElement("div");
+                    row.className = "month-row grid grid-cols-7";
+                    row.dataset.date = weekDays[0].dateStr;
 
-            const weeks = CalendarEngine.generateMonthGrid(state.currentDate);
-            weeks.forEach(weekDays => {
-                const row = document.createElement('div');
-                row.className = "month-row grid grid-cols-7";
-                row.dataset.date = weekDays[0].dateStr;
+                    weekDays.forEach((d) => {
+                        const cell = document.createElement("div");
+                        cell.className = "month-cell p-1";
+                        cell.innerHTML = `<div class="text-right text-xs ${d.date.month() === state.currentDate.month() ? "text-gray-700" : "text-gray-300"}">${d.date.date()}</div>`;
+                        row.appendChild(cell);
+                    });
 
-                weekDays.forEach(d => {
-                    const cell = document.createElement('div');
-                    cell.className = "month-cell p-1";
-                    cell.innerHTML = `<div class="text-right text-xs ${d.date.month()===state.currentDate.month()?'text-gray-700':'text-gray-300'}">${d.date.date()}</div>`;
-                    row.appendChild(cell);
+                    const layout = CalendarEngine.calculateMonthLayout(
+                        state.events,
+                        weekDays[0].date,
+                        weekDays[6].date,
+                    );
+                    layout.forEach((item) => {
+                        const el = document.createElement("div");
+                        el.className = `event-base event-bar ${item.origin.color}`;
+                        el.innerText = item.origin.title;
+                        el.dataset.eid = item.origin.id;
+                        el.style.left = `calc(${item.startIdx * 14.28}% + 2px)`;
+                        el.style.width = `calc(${item.span * 14.28}% - 4px)`;
+                        el.style.top = `${26 + item.slot * 28}px`;
+                        el.innerHTML += `<div class="resize-handle resize-h left"></div><div class="resize-handle resize-h right"></div>`;
+                        DragManager.initMonthDrag(
+                            el,
+                            item.origin,
+                            item,
+                            renderApp,
+                        );
+                        row.appendChild(el);
+                    });
+
+                    body.appendChild(row);
                 });
-
-                const layout = CalendarEngine.calculateMonthLayout(state.events, weekDays[0].date, weekDays[6].date);
-                layout.forEach(item => {
-                    const el = document.createElement('div');
-                    el.className = `event-base event-bar ${item.origin.color}`;
-                    el.innerText = item.origin.title;
-                    el.dataset.eid = item.origin.id;
-                    el.style.left = `calc(${item.startIdx * 14.28}% + 2px)`;
-                    el.style.width = `calc(${item.span * 14.28}% - 4px)`;
-                    el.style.top = `${26 + item.slot * 28}px`;
-                    el.innerHTML += `<div class="resize-handle resize-h left"></div><div class="resize-handle resize-h right"></div>`;
-                    DragManager.initMonthDrag(el, item.origin, item, renderApp);
-                    row.appendChild(el);
-                });
-
-                body.appendChild(row);
-            });
-            container.appendChild(body);
-        }
-
-        // --- 渲染周/日视图 ---
-        function renderTimeView(container, initialScrollTop) {
-            const columns = CalendarEngine.generateTimeColumns(state.currentDate, state.currentView);
-
-            const header = document.createElement('div');
-            header.className = "time-header pl-[60px]";
-            columns.forEach(d => {
-                const cell = document.createElement('div');
-                cell.className = "time-header-cell " + (d.date.isSame(dayjs(), 'day') ? "bg-blue-50 text-blue-600" : "");
-                cell.innerHTML = `<div>${['周日','周一','周二','周三','周四','周五','周六'][d.date.day()]}</div><div class="font-bold text-lg">${d.date.date()}</div>`;
-                header.appendChild(cell);
-            });
-
-            const scrollWrap = document.createElement('div');
-            scrollWrap.className = "time-grid-container";
-
-            const bodyInner = document.createElement('div');
-            bodyInner.className = "time-body";
-
-            const axis = document.createElement('div');
-            axis.className = "time-axis";
-            for(let i=0; i<24; i++) {
-                const label = document.createElement('div');
-                label.className = "time-axis-label";
-                label.innerText = `${i}:00`;
-                label.style.position = 'absolute';
-                label.style.top = `${i * 60}px`;
-                axis.appendChild(label);
+                container.appendChild(body);
             }
-            bodyInner.appendChild(axis);
 
-            columns.forEach(colData => {
-                const col = document.createElement('div');
-                col.className = "day-column";
-                col.dataset.date = colData.dateStr;
+            // --- 渲染周/日视图 ---
+            function renderTimeView(container, initialScrollTop) {
+                const columns = CalendarEngine.generateTimeColumns(
+                    state.currentDate,
+                    state.currentView,
+                );
 
-                const layout = CalendarEngine.calculateTimeLayout(state.events, colData.dateStr);
-                layout.forEach(item => {
-                    const el = document.createElement('div');
-                    el.className = `event-base event-block ${item.origin.color}`;
-                    el.dataset.eid = item.origin.id;
-                    el.style.top = `${item.top}px`;
-                    el.style.height = `${item.height}px`;
+                const header = document.createElement("div");
+                header.className = "time-header pl-[60px]";
+                columns.forEach((d) => {
+                    const cell = document.createElement("div");
+                    cell.className =
+                        "time-header-cell " +
+                        (d.date.isSame(dayjs(), "day")
+                            ? "bg-blue-50 text-blue-600"
+                            : "");
+                    cell.innerHTML = `<div>${["周日", "周一", "周二", "周三", "周四", "周五", "周六"][d.date.day()]}</div><div class="font-bold text-lg">${d.date.date()}</div>`;
+                    header.appendChild(cell);
+                });
 
-                    // [修复] 应用动态计算的宽度和左边距
-                    // 预留 1% 的缝隙防止视觉粘连
-                    el.style.width = `calc(${item.widthPercent}% - 2px)`;
-                    el.style.left = `${item.leftPercent}%`;
+                const scrollWrap = document.createElement("div");
+                scrollWrap.className = "time-grid-container";
 
-                    el.innerHTML = `
-                        <div class="time-text">${dayjs(item.origin.start).format('HH:mm')} - ${dayjs(item.origin.end).format('HH:mm')}</div>
+                const bodyInner = document.createElement("div");
+                bodyInner.className = "time-body";
+
+                const axis = document.createElement("div");
+                axis.className = "time-axis";
+                for (let i = 0; i < 24; i++) {
+                    const label = document.createElement("div");
+                    label.className = "time-axis-label";
+                    label.innerText = `${i}:00`;
+                    label.style.position = "absolute";
+                    label.style.top = `${i * 60}px`;
+                    axis.appendChild(label);
+                }
+                bodyInner.appendChild(axis);
+
+                columns.forEach((colData) => {
+                    const col = document.createElement("div");
+                    col.className = "day-column";
+                    col.dataset.date = colData.dateStr;
+
+                    const layout = CalendarEngine.calculateTimeLayout(
+                        state.events,
+                        colData.dateStr,
+                    );
+                    layout.forEach((item) => {
+                        const el = document.createElement("div");
+                        el.className = `event-base event-block ${item.origin.color}`;
+                        el.dataset.eid = item.origin.id;
+                        el.style.top = `${item.top}px`;
+                        el.style.height = `${item.height}px`;
+
+                        // [修复] 应用动态计算的宽度和左边距
+                        // 预留 1% 的缝隙防止视觉粘连
+                        el.style.width = `calc(${item.widthPercent}% - 2px)`;
+                        el.style.left = `${item.leftPercent}%`;
+
+                        el.innerHTML = `
+                        <div class="time-text">${dayjs(item.origin.start).format("HH:mm")} - ${dayjs(item.origin.end).format("HH:mm")}</div>
                         <div class="font-bold truncate">${item.origin.title}</div>
                         <div class="resize-handle resize-v"></div>
                     `;
 
-                    DragManager.initTimeDrag(el, item.origin, item, renderApp);
-                    col.appendChild(el);
+                        DragManager.initTimeDrag(
+                            el,
+                            item.origin,
+                            item,
+                            renderApp,
+                        );
+                        col.appendChild(el);
+                    });
+
+                    bodyInner.appendChild(col);
                 });
 
-                bodyInner.appendChild(col);
-            });
+                scrollWrap.appendChild(bodyInner);
+                container.appendChild(header);
+                container.appendChild(scrollWrap);
 
-            scrollWrap.appendChild(bodyInner);
-            container.appendChild(header);
-            container.appendChild(scrollWrap);
+                // 恢复滚动位置
+                setTimeout(() => {
+                    if (
+                        initialScrollTop !== null &&
+                        initialScrollTop !== undefined
+                    ) {
+                        scrollWrap.scrollTop = initialScrollTop;
+                    } else {
+                        scrollWrap.scrollTop = 480; // 8:00 (默认)
+                    }
+                }, 0);
+            }
 
-            // 恢复滚动位置
-            setTimeout(() => {
-                if (initialScrollTop !== null && initialScrollTop !== undefined) {
-                    scrollWrap.scrollTop = initialScrollTop;
-                } else {
-                    scrollWrap.scrollTop = 480; // 8:00 (默认)
-                }
-            }, 0);
-        }
+            window.moveDate = (delta) => {
+                const unit =
+                    state.currentView === "month"
+                        ? "month"
+                        : state.currentView === "week"
+                          ? "week"
+                          : "day";
+                state.currentDate = state.currentDate.add(delta, unit);
+                renderApp();
+            };
+            window.resetDate = () => {
+                state.currentDate = dayjs();
+                renderApp();
+            };
 
-        window.moveDate = (delta) => {
-            const unit = state.currentView === 'month' ? 'month' : (state.currentView === 'week' ? 'week' : 'day');
-            state.currentDate = state.currentDate.add(delta, unit);
             renderApp();
-        };
-        window.resetDate = () => {
-            state.currentDate = dayjs();
-            renderApp();
-        };
-
-        renderApp();
-
-    </script>
-</body>
+        </script>
+    </body>
 </html>
