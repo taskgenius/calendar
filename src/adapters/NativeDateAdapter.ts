@@ -16,7 +16,7 @@ export class NativeDateAdapter implements DateAdapter<Date> {
   }
 
   parse(dateStr: string, _format?: string): Date {
-    // Support ISO format with - or / separators: YYYY-MM-DD, YYYY/MM/DD, etc.
+    // Support ISO format with - or / separators: yyyy-MM-dd, yyyy/MM/dd, etc.
     // Format parameter is ignored as native Date is limited
 
     // Normalize separators to - for consistent parsing
@@ -44,16 +44,20 @@ export class NativeDateAdapter implements DateAdapter<Date> {
     const minute = String(date.getMinutes()).padStart(2, "0");
     const second = String(date.getSeconds()).padStart(2, "0");
 
-    // Support both Day.js (YYYY, DD, D, M) and date-fns (yyyy, dd, d) tokens
+    // Support both legacy tokens (YYYY, DD, D) and unicode tokens (yyyy, dd, d)
+    // IMPORTANT: Replace multi-character tokens first, then single-character tokens
     return format
-      .replace(/YYYY|yyyy/g, String(year))
+      .replace(/YYYY/g, String(year))
+      .replace(/yyyy/g, String(year))
       .replace(/MM/g, month)
-      .replace(/\bM\b/g, String(monthNum)) // Single M without padding
-      .replace(/DD|dd/g, day)
-      .replace(/\bD\b|\bd\b/g, String(dayNum)) // Single D/d without padding
+      .replace(/DD/g, day)
+      .replace(/dd/g, day)
       .replace(/HH/g, hour)
       .replace(/mm/g, minute)
-      .replace(/ss/g, second);
+      .replace(/ss/g, second)
+      .replace(/\bM\b/g, String(monthNum)) // Single M without padding
+      .replace(/\bD\b/g, String(dayNum)) // Single D without padding
+      .replace(/\bd\b/g, String(dayNum)); // Single d without padding
   }
 
   // =============================================================================

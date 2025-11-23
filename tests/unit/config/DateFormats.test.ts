@@ -4,12 +4,12 @@ import type { DateFormatConfig } from "../../../src/types";
 
 describe("DateFormats", () => {
   describe("DEFAULT_DATE_FORMATS", () => {
-    it("should have correct default values for Day.js", () => {
-      expect(DEFAULT_DATE_FORMATS.date).toBe("YYYY-MM-DD");
-      expect(DEFAULT_DATE_FORMATS.dateTime).toBe("YYYY-MM-DD HH:mm");
+    it("should have correct default values using Unicode tokens", () => {
+      expect(DEFAULT_DATE_FORMATS.date).toBe("yyyy-MM-dd");
+      expect(DEFAULT_DATE_FORMATS.dateTime).toBe("yyyy-MM-dd HH:mm");
       expect(DEFAULT_DATE_FORMATS.time).toBe("HH:mm");
-      expect(DEFAULT_DATE_FORMATS.monthHeader).toBe("YYYY年 M月");
-      expect(DEFAULT_DATE_FORMATS.dayHeader).toBe("YYYY年M月D日");
+      expect(DEFAULT_DATE_FORMATS.monthHeader).toBe("yyyy年 M月");
+      expect(DEFAULT_DATE_FORMATS.dayHeader).toBe("yyyy年M月d日");
     });
 
     it("should be fully required (no optional fields)", () => {

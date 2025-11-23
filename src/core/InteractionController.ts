@@ -12,7 +12,6 @@ import type {
 import type { DragController } from "./DragController";
 import type { EventManager } from "./EventManager";
 import { createElement, setStyles, querySelectorAll } from "../utils/dom";
-import { INTERNAL_DATA_FORMAT } from "../constants";
 
 /**
  * Manages all user interactions with the calendar
@@ -148,9 +147,9 @@ export class InteractionController<T> {
     if (this.currentView() === "month") {
       const cellEl = target.closest(".tg-month-cell");
       if (cellEl) {
-        const dateStr = this.getDateFromCell(cellEl as HTMLElement);
-        if (dateStr) {
-          this.config.onDateDoubleClick?.(dateStr);
+        const date = this.getDateFromCell(cellEl as HTMLElement);
+        if (date) {
+          this.config.onDateDoubleClick?.(this.toDate(date));
         }
         return;
       }
@@ -160,9 +159,9 @@ export class InteractionController<T> {
     if (this.currentView() === "week" || this.currentView() === "day") {
       const colEl = target.closest(".tg-day-column");
       if (colEl && !target.closest(".tg-event-block")) {
-        const dateTimeStr = this.getDateTimeFromSlot(e, colEl as HTMLElement);
-        if (dateTimeStr) {
-          this.config.onTimeSlotDoubleClick?.(dateTimeStr);
+        const dateTime = this.getDateTimeFromSlot(e, colEl as HTMLElement);
+        if (dateTime) {
+          this.config.onTimeSlotDoubleClick?.(this.toDate(dateTime));
         }
         return;
       }
@@ -202,9 +201,13 @@ export class InteractionController<T> {
       const cellEl = target.closest(".tg-month-cell");
       if (cellEl) {
         e.preventDefault();
-        const dateStr = this.getDateFromCell(cellEl as HTMLElement);
-        if (dateStr) {
-          this.config.onDateContextMenu(dateStr, e.clientX, e.clientY);
+        const date = this.getDateFromCell(cellEl as HTMLElement);
+        if (date) {
+          this.config.onDateContextMenu(
+            this.toDate(date),
+            e.clientX,
+            e.clientY,
+          );
         }
         return;
       }
@@ -218,9 +221,13 @@ export class InteractionController<T> {
       const colEl = target.closest(".tg-day-column");
       if (colEl && !target.closest(".tg-event-block")) {
         e.preventDefault();
-        const dateTimeStr = this.getDateTimeFromSlot(e, colEl as HTMLElement);
-        if (dateTimeStr) {
-          this.config.onTimeSlotContextMenu(dateTimeStr, e.clientX, e.clientY);
+        const dateTime = this.getDateTimeFromSlot(e, colEl as HTMLElement);
+        if (dateTime) {
+          this.config.onTimeSlotContextMenu(
+            this.toDate(dateTime),
+            e.clientX,
+            e.clientY,
+          );
         }
         return;
       }
@@ -252,15 +259,15 @@ export class InteractionController<T> {
       const cellEl = target.closest(".tg-month-cell");
       if (!cellEl) return;
 
-      const dateStr = this.getDateFromCell(cellEl as HTMLElement);
-      if (!dateStr) return;
+      const date = this.getDateFromCell(cellEl as HTMLElement);
+      if (!date) return;
 
       this.rangeState = {
         isSelecting: true,
-        startDate: this.adapter.parse(dateStr),
+        startDate: date,
         startX: e.clientX,
         startY: e.clientY,
-        currentDate: this.adapter.parse(dateStr),
+        currentDate: date,
         viewType: "month",
       };
 
@@ -283,15 +290,15 @@ export class InteractionController<T> {
       const colEl = target.closest(".tg-day-column");
       if (!colEl) return;
 
-      const dateTimeStr = this.getDateTimeFromSlot(e, colEl as HTMLElement);
-      if (!dateTimeStr) return;
+      const dateTime = this.getDateTimeFromSlot(e, colEl as HTMLElement);
+      if (!dateTime) return;
 
       this.rangeState = {
         isSelecting: true,
-        startDate: this.adapter.parse(dateTimeStr),
+        startDate: dateTime,
         startX: e.clientX,
         startY: e.clientY,
-        currentDate: this.adapter.parse(dateTimeStr),
+        currentDate: dateTime,
         viewType: "time",
         columnEl: colEl as HTMLElement,
       };
@@ -320,9 +327,9 @@ export class InteractionController<T> {
     if (this.rangeState.viewType === "month") {
       const cellEl = target.closest(".tg-month-cell");
       if (cellEl) {
-        const dateStr = this.getDateFromCell(cellEl as HTMLElement);
-        if (dateStr) {
-          this.rangeState.currentDate = this.adapter.parse(dateStr);
+        const date = this.getDateFromCell(cellEl as HTMLElement);
+        if (date) {
+          this.rangeState.currentDate = date;
           this.renderMonthRangePreview();
         }
       }
@@ -330,9 +337,9 @@ export class InteractionController<T> {
       // Time view
       const colEl = target.closest(".tg-day-column");
       if (colEl) {
-        const dateTimeStr = this.getDateTimeFromSlot(e, colEl as HTMLElement);
-        if (dateTimeStr) {
-          this.rangeState.currentDate = this.adapter.parse(dateTimeStr);
+        const dateTime = this.getDateTimeFromSlot(e, colEl as HTMLElement);
+        if (dateTime) {
+          this.rangeState.currentDate = dateTime;
           this.renderTimeRangePreview();
         }
       }
@@ -362,24 +369,12 @@ export class InteractionController<T> {
       const isStartAfterEnd = this.adapter.isAfter(startDate, endDate);
 
       if (this.rangeState.viewType === "month") {
-        const start = this.adapter.format(
-          isStartAfterEnd ? endDate : startDate,
-          INTERNAL_DATA_FORMAT.date,
-        );
-        const end = this.adapter.format(
-          isStartAfterEnd ? startDate : endDate,
-          INTERNAL_DATA_FORMAT.date,
-        );
+        const start = this.toDate(isStartAfterEnd ? endDate : startDate);
+        const end = this.toDate(isStartAfterEnd ? startDate : endDate);
         this.config.onDateRangeSelect?.(start, end);
       } else {
-        const start = this.adapter.format(
-          isStartAfterEnd ? endDate : startDate,
-          INTERNAL_DATA_FORMAT.dateTime,
-        );
-        const end = this.adapter.format(
-          isStartAfterEnd ? startDate : endDate,
-          INTERNAL_DATA_FORMAT.dateTime,
-        );
+        const start = this.toDate(isStartAfterEnd ? endDate : startDate);
+        const end = this.toDate(isStartAfterEnd ? startDate : endDate);
         this.config.onTimeRangeSelect?.(start, end);
       }
     }
@@ -393,6 +388,19 @@ export class InteractionController<T> {
   // ==========================================================================
 
   /**
+   * Convert adapter date to native Date object
+   */
+  private toDate(adapterDate: T): Date {
+    return new Date(
+      this.adapter.year(adapterDate),
+      this.adapter.month(adapterDate),
+      this.adapter.date(adapterDate),
+      this.adapter.hour(adapterDate),
+      this.adapter.minute(adapterDate),
+    );
+  }
+
+  /**
    * Get event by ID from event manager
    */
   private getEventById(eventId: string | null): CalendarEvent | undefined {
@@ -401,9 +409,9 @@ export class InteractionController<T> {
   }
 
   /**
-   * Get date string from a month view cell
+   * Get date from a month view cell
    */
-  private getDateFromCell(cellEl: HTMLElement): string | null {
+  private getDateFromCell(cellEl: HTMLElement): T | null {
     const row = cellEl.closest(".tg-month-row") as HTMLElement;
     if (!row?.dataset["date"]) return null;
 
@@ -413,16 +421,13 @@ export class InteractionController<T> {
 
     const rowStart = this.adapter.parse(row.dataset["date"]);
     const clickedDate = this.adapter.add(rowStart, index, "day");
-    return this.adapter.format(clickedDate, INTERNAL_DATA_FORMAT.date);
+    return clickedDate;
   }
 
   /**
-   * Get date-time string from a time slot click
+   * Get date-time from a time slot click
    */
-  private getDateTimeFromSlot(
-    e: MouseEvent,
-    colEl: HTMLElement,
-  ): string | null {
+  private getDateTimeFromSlot(e: MouseEvent, colEl: HTMLElement): T | null {
     const dateStr = colEl.dataset["date"];
     if (!dateStr) return null;
 
@@ -444,16 +449,16 @@ export class InteractionController<T> {
       snappedMinutes % 60,
     );
 
-    return this.adapter.format(dateTime, INTERNAL_DATA_FORMAT.dateTime);
+    return dateTime;
   }
 
   /**
    * Handle date cell click
    */
   private handleDateClick(cellEl: HTMLElement): void {
-    const dateStr = this.getDateFromCell(cellEl);
-    if (dateStr) {
-      this.config.onDateClick?.(dateStr);
+    const date = this.getDateFromCell(cellEl);
+    if (date) {
+      this.config.onDateClick?.(this.toDate(date));
     }
   }
 
@@ -461,9 +466,9 @@ export class InteractionController<T> {
    * Handle time slot click
    */
   private handleTimeSlotClick(e: MouseEvent, colEl: HTMLElement): void {
-    const dateTimeStr = this.getDateTimeFromSlot(e, colEl);
-    if (dateTimeStr) {
-      this.config.onTimeSlotClick?.(dateTimeStr);
+    const dateTime = this.getDateTimeFromSlot(e, colEl);
+    if (dateTime) {
+      this.config.onTimeSlotClick?.(this.toDate(dateTime));
     }
   }
 
@@ -547,18 +552,24 @@ export class InteractionController<T> {
       ? this.rangeState.startDate
       : this.rangeState.currentDate;
 
-    // Get date strings
-    const startDateStr = this.adapter.format(
-      startDate,
-      INTERNAL_DATA_FORMAT.date,
-    );
-    const endDateStr = this.adapter.format(endDate, INTERNAL_DATA_FORMAT.date);
+    // Check if selection is within a single day
+    const isSameDay = this.adapter.isSame(startDate, endDate, "day");
 
     // Handle single column selection
-    if (startDateStr === endDateStr) {
-      const col = document.querySelector(
-        `.tg-day-column[data-date="${startDateStr}"]`,
-      ) as HTMLElement;
+    if (isSameDay) {
+      // Find the column for this date
+      const columns = querySelectorAll<HTMLElement>(".tg-day-column");
+      let col: HTMLElement | null = null;
+      for (const c of columns) {
+        const colDateStr = c.dataset["date"];
+        if (colDateStr) {
+          const colDate = this.adapter.parse(colDateStr);
+          if (this.adapter.isSame(colDate, startDate, "day")) {
+            col = c;
+            break;
+          }
+        }
+      }
       if (!col) return;
 
       const startMin =

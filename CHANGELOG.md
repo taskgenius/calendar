@@ -7,6 +7,99 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0] - 2025-01-23
+
+### ⚠️ BREAKING CHANGES
+
+#### 1. Callback Parameters Changed to Date Objects
+
+All date-related callback parameters have been changed from `string` to `Date` for better type safety and developer experience.
+
+**Migration Guide:**
+
+```typescript
+// Before (v0.7.x)
+onDateClick: (dateStr: string) => {
+  const date = new Date(dateStr);  // Manual parsing required
+  console.log(date);
+}
+
+// After (v0.8.0)
+onDateClick: (date: Date) => {
+  console.log(date);  // Date object directly available
+}
+```
+
+**Affected callbacks:**
+- `onDateChange`: `(date: string) => void` → `(date: Date) => void`
+- `onDateClick`: `(date: string) => void` → `(date: Date) => void`
+- `onDateDoubleClick`: `(date: string) => void` → `(date: Date) => void`
+- `onDateContextMenu`: `(date: string, x, y) => void` → `(date: Date, x, y) => void`
+- `onTimeSlotClick`: `(dateTime: string) => void` → `(dateTime: Date) => void`
+- `onTimeSlotDoubleClick`: `(dateTime: string) => void` → `(dateTime: Date) => void`
+- `onTimeSlotContextMenu`: `(dateTime: string, x, y) => void` → `(dateTime: Date, x, y) => void`
+- `onDateRangeSelect`: `(start: string, end: string) => void` → `(start: Date, end: Date) => void`
+- `onTimeRangeSelect`: `(start: string, end: string) => void` → `(start: Date, end: Date) => void`
+
+#### 2. Default Date Format Tokens Changed to Unicode Standard
+
+Default date format tokens have been updated from Day.js-specific tokens to standard Unicode tokens for better cross-library compatibility and date-fns v4 support.
+
+**Migration Guide:**
+
+If you were relying on the default formats (without providing custom `dateFormats`), your UI display will remain the same, but if you were referencing `DEFAULT_DATE_FORMATS` constant in your code, update as follows:
+
+```typescript
+// Before (v0.7.x)
+import { DEFAULT_DATE_FORMATS } from '@taskgenius/calendar';
+// DEFAULT_DATE_FORMATS.date === "YYYY-MM-DD"
+// DEFAULT_DATE_FORMATS.monthHeader === "YYYY年 M月"
+
+// After (v0.8.0)
+import { DEFAULT_DATE_FORMATS } from '@taskgenius/calendar';
+// DEFAULT_DATE_FORMATS.date === "yyyy-MM-dd"
+// DEFAULT_DATE_FORMATS.monthHeader === "yyyy年 M月"
+```
+
+**Changed default formats:**
+- `date`: `"YYYY-MM-DD"` → `"yyyy-MM-dd"`
+- `dateTime`: `"YYYY-MM-DD HH:mm"` → `"yyyy-MM-dd HH:mm"`
+- `monthHeader`: `"YYYY年 M月"` → `"yyyy年 M月"`
+- `dayHeader`: `"YYYY年M月D日"` → `"yyyy年M月d日"`
+
+**Why this change:**
+- `YYYY` (ISO week-numbering year) → `yyyy` (calendar year) - prevents date-fns v4 protected token warnings
+- `DD` (day of year 001-365) → `dd` (day of month 01-31) - aligns with intended behavior
+- Ensures consistent behavior across all date adapters (Native, Day.js, date-fns)
+
+**Action required:** Only if you explicitly use `DEFAULT_DATE_FORMATS` constant in your code. If you provide custom `dateFormats` config, no changes needed.
+
+### ✨ Features
+
+- **Enhanced type safety**: Callback parameters now provide native Date objects for better developer experience and type safety
+
+### 🏗️ Internal
+
+- Simplified callback implementations by using native Date objects instead of formatted strings
+- Removed unnecessary `INTERNAL_DATA_FORMAT` usage in callback code paths
+- Added `toDate()` helper methods in `Calendar` and `InteractionController` for adapter-to-Date conversion
+- Updated all type definitions and documentation to reflect unicode token usage
+
+### 📚 Documentation
+
+- Updated `CalendarEvent` interface documentation to show `yyyy-MM-dd HH:mm` format
+- Updated `DateFormatConfig` with comprehensive examples showing unicode tokens as recommended
+- Added backward compatibility notes for legacy token support
+- Clarified adapter token compatibility in comments
+
+## [0.7.0] - 2025-11-22
+
+### 🔧 Maintenance
+
+- Update package version to 0.7.0
+
+## [0.6.0] - 2025-11-22
+
 ### 🐛 Bug Fixes
 
 - **Fixed event bar positioning with dayFilter**: Event bars in month view now correctly align with columns when arbitrary days are filtered out. Previously, positioning assumed exactly 7 or 5 columns (based on `showWeekends`), causing misalignment when `dayFilter` hid non-weekend days.
@@ -27,20 +120,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `TimeSlotConfig`: control visibility, custom labels, and className
 - **Dynamic grid layout**: Calendar automatically adjusts column count based on visible days
 - **Backward compatibility**: Existing `showWeekends` config automatically converts to `dayFilter`
+- **Comprehensive user interaction handlers**: Add `InteractionController` to centralize all calendar interactions
+  - Event interactions: `onEventClick`, `onEventDoubleClick`, `onEventContextMenu`
+  - Date interactions (month view): `onDateClick`, `onDateDoubleClick`, `onDateContextMenu`
+  - Time slot interactions (week/day view): `onTimeSlotClick`, `onTimeSlotDoubleClick`, `onTimeSlotContextMenu`
+  - Range selection: `onDateRangeSelect`, `onTimeRangeSelect`
+  - Dynamic drag toggle: `setDraggable()` method to enable/disable drag functionality at runtime
 
 ### 📦 New Exports
 
 - Preset functions: `hideWeekends`, `hideWeekdays`, `onlyDays`, `hideDays`, `workingHours`, `hideHours`, `onlyHours`, `format12h`, `format24h`, `customTimeLabels`, `formatCompact`
 - Types: `DayFilterContext`, `DayRenderConfig`, `TimeSlotConfig`, `TimeFormatter`, `DayFilterResult`, `TimeFilterResult`
+- `InteractionController` for managing user interactions
 
 ### 🎨 Styles
 
 - Added `.tg-disabled` class for filtered-out day cells (opacity: 0.5, pointer-events: none)
 - Added `.tg-time-axis-label.custom` placeholder class for custom time slot styling
+- Added interaction-related styles for better user feedback
 
 ### 📝 Examples
 
 - Updated demo with 6 comprehensive filter examples (commented out by default)
+- Added comprehensive interaction examples showing all supported callbacks
 
 ### 🧪 Testing
 
@@ -227,7 +329,10 @@ new Calendar('#app', {
 - Lightweight (<12KB gzipped)
 - SOLID architecture
 
-[Unreleased]: https://github.com/taskgenius/calendar/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/taskgenius/calendar/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/taskgenius/calendar/compare/v0.7.0...v0.8.0
+[0.7.0]: https://github.com/taskgenius/calendar/compare/v0.6.0...v0.7.0
+[0.6.0]: https://github.com/taskgenius/calendar/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/taskgenius/calendar/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/taskgenius/calendar/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/taskgenius/calendar/compare/v0.2.1...v0.3.0

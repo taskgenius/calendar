@@ -217,10 +217,7 @@ export class Calendar<T = Dayjs> {
   next(): void {
     const unit = this.getNavigationUnit();
     this.currentDate = this.adapter.add(this.currentDate, 1, unit);
-    // Use ISO format for external API (backward compatibility & reliability)
-    this.config.onDateChange?.(
-      this.adapter.format(this.currentDate, INTERNAL_DATA_FORMAT.date),
-    );
+    this.config.onDateChange?.(this.toDate(this.currentDate));
     this.render();
   }
 
@@ -230,10 +227,7 @@ export class Calendar<T = Dayjs> {
   prev(): void {
     const unit = this.getNavigationUnit();
     this.currentDate = this.adapter.add(this.currentDate, -1, unit);
-    // Use ISO format for external API (backward compatibility & reliability)
-    this.config.onDateChange?.(
-      this.adapter.format(this.currentDate, INTERNAL_DATA_FORMAT.date),
-    );
+    this.config.onDateChange?.(this.toDate(this.currentDate));
     this.render();
   }
 
@@ -242,10 +236,7 @@ export class Calendar<T = Dayjs> {
    */
   today(): void {
     this.currentDate = this.adapter.create();
-    // Use ISO format for external API (backward compatibility & reliability)
-    this.config.onDateChange?.(
-      this.adapter.format(this.currentDate, INTERNAL_DATA_FORMAT.date),
-    );
+    this.config.onDateChange?.(this.toDate(this.currentDate));
     this.render();
   }
 
@@ -256,10 +247,7 @@ export class Calendar<T = Dayjs> {
    */
   goToDate(date: string | Date): void {
     this.currentDate = this.adapter.create(date);
-    // Use ISO format for external API (backward compatibility & reliability)
-    this.config.onDateChange?.(
-      this.adapter.format(this.currentDate, INTERNAL_DATA_FORMAT.date),
-    );
+    this.config.onDateChange?.(this.toDate(this.currentDate));
     this.render();
   }
 
@@ -442,6 +430,19 @@ export class Calendar<T = Dayjs> {
     }
   }
 
+  /**
+   * Convert adapter date to native Date object
+   */
+  private toDate(adapterDate: T): Date {
+    return new Date(
+      this.adapter.year(adapterDate),
+      this.adapter.month(adapterDate),
+      this.adapter.date(adapterDate),
+      this.adapter.hour(adapterDate),
+      this.adapter.minute(adapterDate),
+    );
+  }
+
   private handleEventDrop(
     event: CalendarEvent,
     newStart: string,
@@ -471,12 +472,15 @@ export class Calendar<T = Dayjs> {
     // Backward compatibility: convert showWeekends=false to dayFilter
     let dayFilter = config.view?.dayFilter;
     if (!dayFilter && config.view?.showWeekends === false) {
-      dayFilter = (_date: unknown, context: import("../types").DayFilterContext) => {
+      dayFilter = (
+        _date: unknown,
+        context: import("../types").DayFilterContext,
+      ) => {
         return !context.isWeekend;
       };
     }
 
-    const resolvedView: ResolvedCalendarConfig['view'] = {
+    const resolvedView: ResolvedCalendarConfig["view"] = {
       type: config.view?.type || "week",
       showDateHeader: config.view?.showDateHeader ?? true,
       showWeekNumbers: config.view?.showWeekNumbers ?? false,

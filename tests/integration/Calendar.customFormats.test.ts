@@ -7,7 +7,7 @@ describe("Calendar - Custom Date Formats Integration", () => {
   describe("with custom dateFormats configuration", () => {
     it("should use custom formats for display while maintaining ISO for API", () => {
       const container = document.createElement("div");
-      let capturedDate = "";
+      let capturedDate: Date | null = null;
 
       const calendar = new Calendar(container, {
         view: { type: "month" },
@@ -23,11 +23,12 @@ describe("Calendar - Custom Date Formats Integration", () => {
         },
       });
 
-      // Navigate - should use ISO format in callback
+      // Navigate - callback should receive Date object
       calendar.next();
-      expect(capturedDate).toMatch(/^\d{4}-\d{2}-\d{2}$/); // ISO format
+      expect(capturedDate).toBeInstanceOf(Date);
+      expect(capturedDate).not.toBeNull();
 
-      // getCurrentDate should return ISO format
+      // getCurrentDate should return ISO format string
       const currentDate = calendar.getCurrentDate();
       expect(currentDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
 
@@ -169,9 +170,9 @@ describe("Calendar - Custom Date Formats Integration", () => {
       calendar.destroy();
     });
 
-    it("onDateChange callback should receive ISO format", () => {
+    it("onDateChange callback should receive Date objects", () => {
       const container = document.createElement("div");
-      const capturedDates: string[] = [];
+      const capturedDates: Date[] = [];
 
       const calendar = new Calendar(container, {
         view: { type: "month" },
@@ -189,9 +190,10 @@ describe("Calendar - Custom Date Formats Integration", () => {
       calendar.prev();
       calendar.today();
 
-      // All callbacks should receive ISO format
+      // All callbacks should receive Date objects
+      expect(capturedDates).toHaveLength(3);
       capturedDates.forEach((date) => {
-        expect(date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+        expect(date).toBeInstanceOf(Date);
       });
 
       calendar.destroy();

@@ -1,8 +1,8 @@
 /**
  * Day.js implementation of DateAdapter
  */
-import dayjs, { Dayjs } from 'dayjs';
-import type { DateAdapter, TimeUnit } from '../types';
+import dayjs, { Dayjs } from "dayjs";
+import type { DateAdapter, TimeUnit } from "../types";
 
 /**
  * DateAdapter implementation using Day.js
@@ -22,7 +22,14 @@ export class DayJsAdapter implements DateAdapter<Dayjs> {
   }
 
   format(date: Dayjs, formatStr: string): string {
-    return date.format(formatStr);
+    // Convert unicode tokens to Day.js tokens for compatibility
+    // yyyy → YYYY, dd → DD, d → D
+    const dayJsFormat = formatStr
+      .replace(/yyyy/g, "YYYY")
+      .replace(/dd/g, "DD")
+      .replace(/\bd\b/g, "D");
+
+    return date.format(dayJsFormat);
   }
 
   // ==========================================================================

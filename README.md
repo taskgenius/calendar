@@ -127,11 +127,34 @@ interface CalendarConfig {
   events?: CalendarEvent[];
   draggable?: DraggableConfig;
   theme?: ThemeConfig;
-  showEventCounts?: boolean;  // Default: false - Show event count badges on date cells
+  dateFormats?: DateFormatConfig;  // Custom date display formats
+  showEventCounts?: boolean;       // Default: false - Show event count badges on date cells
+  
+  // Event interactions
   onEventClick?: (event: CalendarEvent) => void;
+  onEventDoubleClick?: (event: CalendarEvent) => void;
+  onEventContextMenu?: (event: CalendarEvent, x: number, y: number) => void;
   onEventDrop?: (event: CalendarEvent, newStart: string, newEnd: string) => void;
+  
+  // View and navigation
   onViewChange?: (viewType: ViewType) => void;
-  onDateChange?: (date: string) => void;
+  onDateChange?: (date: Date) => void;  // v0.8.0+: Changed from string to Date
+  
+  // Date cell interactions (month view)
+  onDateClick?: (date: Date) => void;              // v0.8.0+: Changed from string to Date
+  onDateDoubleClick?: (date: Date) => void;        // v0.8.0+: Changed from string to Date
+  onDateContextMenu?: (date: Date, x: number, y: number) => void;  // v0.8.0+: Changed from string to Date
+  
+  // Time slot interactions (week/day view)
+  onTimeSlotClick?: (dateTime: Date) => void;      // v0.8.0+: Changed from string to Date
+  onTimeSlotDoubleClick?: (dateTime: Date) => void;  // v0.8.0+: Changed from string to Date
+  onTimeSlotContextMenu?: (dateTime: Date, x: number, y: number) => void;  // v0.8.0+: Changed from string to Date
+  
+  // Range selection (drag to select multiple cells)
+  onDateRangeSelect?: (startDate: Date, endDate: Date) => void;  // v0.8.0+: Changed from string to Date
+  onTimeRangeSelect?: (startDateTime: Date, endDateTime: Date) => void;  // v0.8.0+: Changed from string to Date
+  
+  // Rendering hooks
   onRenderDateCell?: (ctx: DateCellContext) => void;  // Custom date cell rendering
   onStyleEvent?: (event: CalendarEvent) => EventStyle;  // Custom event styling
 }
@@ -179,8 +202,8 @@ interface ThemeConfig {
 interface CalendarEvent {
   id: string;                        // Unique identifier
   title: string;                     // Display title
-  start: string;                     // ISO format: 'YYYY-MM-DD HH:mm'
-  end: string;                       // ISO format: 'YYYY-MM-DD HH:mm'
+  start: string;                     // ISO format: 'yyyy-MM-dd HH:mm'
+  end: string;                       // ISO format: 'yyyy-MM-dd HH:mm'
   color?: string;                    // CSS color value
   metadata?: Record<string, unknown>; // Custom data
 }
@@ -296,6 +319,85 @@ const calendar = new Calendar('#app', {
   showEventCounts: true  // Display event count on each date cell
 });
 ```
+
+### User Interactions (v0.7.0+)
+
+```typescript
+const calendar = new Calendar('#app', {
+  view: { type: 'month' },
+  
+  // Date cell interactions (month view)
+  onDateClick: (date) => {
+    console.log('Clicked date:', date); // Date object
+    showCreateEventDialog(date);
+  },
+  
+  onDateDoubleClick: (date) => {
+    console.log('Double-clicked date:', date);
+    createQuickEvent(date);
+  },
+  
+  onDateContextMenu: (date, x, y) => {
+    console.log('Right-clicked date:', date, 'at position:', x, y);
+    showContextMenu(date, x, y);
+  },
+  
+  // Range selection (drag to select)
+  onDateRangeSelect: (startDate, endDate) => {
+    console.log('Selected range:', startDate, 'to', endDate);
+    createMultiDayEvent(startDate, endDate);
+  }
+});
+
+// For week/day views with time slots
+const weekCalendar = new Calendar('#app', {
+  view: { type: 'week' },
+  
+  // Time slot interactions
+  onTimeSlotClick: (dateTime) => {
+    console.log('Clicked time slot:', dateTime); // Date object with time
+    createEventAt(dateTime);
+  },
+  
+  onTimeSlotDoubleClick: (dateTime) => {
+    console.log('Double-clicked time slot:', dateTime);
+    quickCreateEvent(dateTime);
+  },
+  
+  onTimeSlotContextMenu: (dateTime, x, y) => {
+    console.log('Right-clicked time slot:', dateTime);
+    showTimeSlotMenu(dateTime, x, y);
+  },
+  
+  // Time range selection (drag to select multiple slots)
+  onTimeRangeSelect: (startDateTime, endDateTime) => {
+    console.log('Selected time range:', startDateTime, 'to', endDateTime);
+    createTimedEvent(startDateTime, endDateTime);
+  }
+});
+```
+
+### Custom Date Formats (v0.8.0+)
+
+```typescript
+const calendar = new Calendar('#app', {
+  // Customize date display formats (uses Unicode tokens)
+  dateFormats: {
+    date: 'yyyy/MM/dd',           // Default: 'yyyy-MM-dd'
+    dateTime: 'yyyy/MM/dd HH:mm', // Default: 'yyyy-MM-dd HH:mm'
+    time: 'HH:mm',                // Default: 'HH:mm'
+    monthHeader: 'MMMM yyyy',     // Default: 'yyyy年 M月'
+    dayHeader: 'MMMM d, yyyy'     // Default: 'yyyy年M月d日'
+  }
+});
+```
+
+**Note**: Date format tokens use Unicode standard (compatible with date-fns, Day.js, and native adapter):
+- Year: `yyyy` (2025), `yy` (25)
+- Month: `MM` (01-12), `M` (1-12), `MMMM` (January), `MMM` (Jan)
+- Day: `dd` (01-31), `d` (1-31)
+- Hour: `HH` (00-23), `H` (0-23)
+- Minute: `mm` (00-59), `m` (0-59)
 
 ### Custom Date Cell Rendering
 

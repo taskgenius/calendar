@@ -100,8 +100,8 @@ describe("CalendarConfig - New Features", () => {
     const config = calendar.config;
 
     expect(config.headerFormat).toBeDefined();
-    expect(config.headerFormat.month).toBe("YYYY年 M月");
-    expect(config.headerFormat.day).toBe("YYYY年M月D日");
+    expect(config.headerFormat.month).toBe("yyyy年 M月");
+    expect(config.headerFormat.day).toBe("yyyy年M月d日");
   });
 
   it("should accept custom headerFormat configuration", () => {
@@ -132,6 +132,6 @@ describe("CalendarConfig - New Features", () => {
     const config = calendar.config;
 
     expect(config.headerFormat.month).toBe("YYYY/MM");
-    expect(config.headerFormat.day).toBe("YYYY年M月D日"); // default value
+    expect(config.headerFormat.day).toBe("yyyy年M月d日"); // default value
   });
 });

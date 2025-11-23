@@ -35,7 +35,15 @@ export class DateFnsAdapter implements DateAdapter<DateFnsDate> {
   }
 
   format(date: Date, formatStr: string): string {
-    return this.fns.format(date, formatStr);
+    // Convert legacy Day.js tokens to unicode tokens for date-fns compatibility
+    // YYYY → yyyy, DD → dd, D → d
+    // date-fns v3+ uses unicode tokens and will warn/error on YYYY/DD (protected tokens in v4)
+    const unicodeFormat = formatStr
+      .replace(/YYYY/g, "yyyy")
+      .replace(/DD/g, "dd")
+      .replace(/\bD\b/g, "d");
+
+    return this.fns.format(date, unicodeFormat);
   }
 
   // =============================================================================
