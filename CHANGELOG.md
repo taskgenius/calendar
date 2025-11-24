@@ -7,6 +7,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0] - 2025-01-24
+
+### ⚠️ BREAKING CHANGES
+
+#### `onEventDrop` Callback Parameters Changed to Date Objects
+
+The `onEventDrop` callback parameters have been changed from `string` to `Date` for consistency with other callbacks updated in v0.8.0.
+
+**Migration Guide:**
+
+```typescript
+// Before (v0.8.x)
+onEventDrop: (event, newStart: string, newEnd: string) => {
+  saveToServer(event.id, { start: newStart, end: newEnd });
+}
+
+// After (v0.9.0)
+onEventDrop: (event, newStart: Date, newEnd: Date) => {
+  saveToServer(event.id, {
+    start: newStart.toISOString(),
+    end: newEnd.toISOString()
+  });
+}
+```
+
+### ✨ Features
+
+- **New `onEventResize` callback**: Separate callback for resize operations, distinguishing between moving an event and changing its duration
+  - Triggered when dragging event edges (start/end time) in week/day views
+  - Receives same parameters as `onEventDrop`: `(event, newStart: Date, newEnd: Date)`
+
+### 🏗️ Internal
+
+- **DragController refactoring**: Now properly distinguishes between `move` and `resize` modes
+  - `onDrop` callback triggered only for move operations
+  - `onResize` callback triggered for resize-left, resize-right, resize-top, resize-bottom operations
+- Added `toDate()` helper method in `DragController` for adapter-to-Date conversion
+
+### 📚 Documentation
+
+- Updated README with `onEventResize` callback example
+- Updated API documentation with detailed callback descriptions
+- Clarified that `onEventDrop` is only for move operations
+
 ## [0.8.0] - 2025-01-23
 
 ### ⚠️ BREAKING CHANGES
@@ -329,7 +373,8 @@ new Calendar('#app', {
 - Lightweight (<12KB gzipped)
 - SOLID architecture
 
-[Unreleased]: https://github.com/taskgenius/calendar/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/taskgenius/calendar/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/taskgenius/calendar/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/taskgenius/calendar/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/taskgenius/calendar/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/taskgenius/calendar/compare/v0.5.0...v0.6.0

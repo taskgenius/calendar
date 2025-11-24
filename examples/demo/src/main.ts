@@ -73,7 +73,12 @@ const calendar = new Calendar("#app", {
   },
   onEventDrop: (event, newStart, newEnd) => {
     log(
-      `[Event] Move: ${event.title}\n  From: ${event.start}\n  To: ${newStart} - ${newEnd}`,
+      `[Event] Move: ${event.title}\n  From: ${event.start}\n  To: ${newStart.toISOString()} - ${newEnd.toISOString()}`,
+    );
+  },
+  onEventResize: (event, newStart, newEnd) => {
+    log(
+      `[Event] Resize: ${event.title}\n  From: ${event.start} - ${event.end}\n  To: ${newStart.toISOString()} - ${newEnd.toISOString()}`,
     );
   },
 

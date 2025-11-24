@@ -69,8 +69,8 @@ describe("Calendar - Custom Date Formats Integration", () => {
 
     it("should handle drag-and-drop with custom formats", () => {
       const container = document.createElement("div");
-      let droppedStart = "";
-      let droppedEnd = "";
+      let droppedStart: Date | null = null;
+      let droppedEnd: Date | null = null;
 
       const calendar = new Calendar(container, {
         view: { type: "week" },
@@ -101,9 +101,9 @@ describe("Calendar - Custom Date Formats Integration", () => {
       // Verify calendar renders
       expect(container.querySelector(".tg-calendar")).toBeTruthy();
 
-      // Event drop callback should use ISO format (YYYY-MM-DD HH:mm)
+      // Event drop callback receives Date objects (v0.8.0+)
       // even when dateFormats uses different format
-      // This is tested indirectly - the format is defined in INTERNAL_DATA_FORMAT
+      // This ensures type safety and consistency with other callbacks
 
       calendar.destroy();
     });

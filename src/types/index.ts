@@ -445,12 +445,10 @@ export interface CalendarConfig {
   onEventDoubleClick?: (event: CalendarEvent) => void;
   /** Callback when an event is right-clicked */
   onEventContextMenu?: (event: CalendarEvent, x: number, y: number) => void;
-  /** Callback when an event is dropped after dragging */
-  onEventDrop?: (
-    event: CalendarEvent,
-    newStart: string,
-    newEnd: string,
-  ) => void;
+  /** Callback when an event is dropped after dragging (moved to a new position) */
+  onEventDrop?: (event: CalendarEvent, newStart: Date, newEnd: Date) => void;
+  /** Callback when an event is resized (duration changed by dragging start/end time) */
+  onEventResize?: (event: CalendarEvent, newStart: Date, newEnd: Date) => void;
   /** Callback when the view type changes */
   onViewChange?: (viewType: ViewType) => void;
   /** Callback when navigating to a different date */
@@ -501,11 +499,8 @@ export interface ResolvedCalendarConfig {
   onEventClick?: (event: CalendarEvent) => void;
   onEventDoubleClick?: (event: CalendarEvent) => void;
   onEventContextMenu?: (event: CalendarEvent, x: number, y: number) => void;
-  onEventDrop?: (
-    event: CalendarEvent,
-    newStart: string,
-    newEnd: string,
-  ) => void;
+  onEventDrop?: (event: CalendarEvent, newStart: Date, newEnd: Date) => void;
+  onEventResize?: (event: CalendarEvent, newStart: Date, newEnd: Date) => void;
   onViewChange?: (viewType: ViewType) => void;
   onDateChange?: (date: Date) => void;
   onDateClick?: (date: Date) => void;

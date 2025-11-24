@@ -25,8 +25,13 @@ export class DragController<T> {
     private config: Required<DraggableConfig>,
     private onDrop: (
       event: CalendarEvent,
-      newStart: string,
-      newEnd: string,
+      newStart: Date,
+      newEnd: Date,
+    ) => void,
+    private onResize: (
+      event: CalendarEvent,
+      newStart: Date,
+      newEnd: Date,
     ) => void,
     private cellHeight: number = 60,
     private dateFormats: Required<DateFormatConfig>,
@@ -475,19 +480,33 @@ export class DragController<T> {
 
     // Apply changes if we have tentative dates
     if (s.tentativeStart && s.tentativeEnd) {
-      const newStart = this.adapter.format(
-        s.tentativeStart,
-        this.dateFormats.dateTime,
-      );
-      const newEnd = this.adapter.format(
-        s.tentativeEnd,
-        this.dateFormats.dateTime,
-      );
+      // Convert adapter dates to native Date objects
+      const newStart = this.toDate(s.tentativeStart);
+      const newEnd = this.toDate(s.tentativeEnd);
 
-      this.onDrop(s.event, newStart, newEnd);
+      // Call appropriate callback based on operation type
+      if (s.mode === "move") {
+        this.onDrop(s.event, newStart, newEnd);
+      } else {
+        // resize-left, resize-right, resize-top, resize-bottom
+        this.onResize(s.event, newStart, newEnd);
+      }
       s.renderCallback();
     }
 
     this.state = null;
+  }
+
+  /**
+   * Convert adapter date to native Date object
+   */
+  private toDate(adapterDate: T): Date {
+    return new Date(
+      this.adapter.year(adapterDate),
+      this.adapter.month(adapterDate),
+      this.adapter.date(adapterDate),
+      this.adapter.hour(adapterDate),
+      this.adapter.minute(adapterDate),
+    );
   }
 }

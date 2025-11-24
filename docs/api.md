@@ -172,7 +172,7 @@ interface CalendarConfig {
   theme?: ThemeConfig;
   dateAdapter?: DateAdapter<unknown>;
   onEventClick?: (event: CalendarEvent) => void;
-  onEventDrop?: (event: CalendarEvent, newStart: string, newEnd: string) => void;
+  onEventDrop?: (event: CalendarEvent, newStart: Date, newEnd: Date) => void;
   onViewChange?: (viewType: ViewType) => void;
   onDateChange?: (date: string) => void;
 }
@@ -291,23 +291,56 @@ const calendar = new Calendar('#app', {
 
 ### onEventDrop
 
-Called when an event is moved or resized via drag-and-drop.
+Called when an event is moved to a new position via drag-and-drop.
 
 ```typescript
-onEventDrop?: (event: CalendarEvent, newStart: string, newEnd: string) => void
+onEventDrop?: (event: CalendarEvent, newStart: Date, newEnd: Date) => void
 ```
 
 **Parameters:**
 - `event` - The event that was moved
-- `newStart` - New start date/time in ISO format
-- `newEnd` - New end date/time in ISO format
+- `newStart` - New start date/time as Date object
+- `newEnd` - New end date/time as Date object
+
+**Note:** This callback is only triggered for move operations. For resize operations, use `onEventResize`.
 
 **Example:**
 ```typescript
 const calendar = new Calendar('#app', {
   onEventDrop: (event, newStart, newEnd) => {
-    // Update backend
-    updateEventInDatabase(event.id, { start: newStart, end: newEnd });
+    console.log('Event moved:', event.title);
+    updateEventInDatabase(event.id, { 
+      start: newStart.toISOString(), 
+      end: newEnd.toISOString() 
+    });
+  }
+});
+```
+
+### onEventResize
+
+Called when an event's duration is changed by dragging its start or end time.
+
+```typescript
+onEventResize?: (event: CalendarEvent, newStart: Date, newEnd: Date) => void
+```
+
+**Since:** v0.9.0
+
+**Parameters:**
+- `event` - The event that was resized
+- `newStart` - New start date/time as Date object
+- `newEnd` - New end date/time as Date object
+
+**Example:**
+```typescript
+const calendar = new Calendar('#app', {
+  onEventResize: (event, newStart, newEnd) => {
+    console.log('Event resized:', event.title);
+    updateEventInDatabase(event.id, { 
+      start: newStart.toISOString(), 
+      end: newEnd.toISOString() 
+    });
   }
 });
 ```
@@ -377,7 +410,10 @@ const calendar = new Calendar('#app', {
   },
   onEventDrop: async (event, newStart, newEnd) => {
     try {
-      await updateEvent(event.id, { start: newStart, end: newEnd });
+      await updateEvent(event.id, { 
+        start: newStart.toISOString(), 
+        end: newEnd.toISOString() 
+      });
       console.log('Event updated successfully');
     } catch (error) {
       console.error('Failed to update event:', error);

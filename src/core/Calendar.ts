@@ -91,6 +91,7 @@ export class Calendar<T = Dayjs> {
       this.adapter,
       this.config.draggable,
       this.handleEventDrop.bind(this),
+      this.handleEventResize.bind(this),
       this.config.theme.cellHeight,
       this.config.dateFormats,
     );
@@ -445,11 +446,46 @@ export class Calendar<T = Dayjs> {
 
   private handleEventDrop(
     event: CalendarEvent,
-    newStart: string,
-    newEnd: string,
+    newStart: Date,
+    newEnd: Date,
   ): void {
-    this.eventManager.updateEvent(event.id, { start: newStart, end: newEnd });
+    // Convert Date objects to ISO format strings for internal event storage
+    const newStartStr = this.adapter.format(
+      this.adapter.create(newStart),
+      INTERNAL_DATA_FORMAT.dateTime,
+    );
+    const newEndStr = this.adapter.format(
+      this.adapter.create(newEnd),
+      INTERNAL_DATA_FORMAT.dateTime,
+    );
+
+    this.eventManager.updateEvent(event.id, {
+      start: newStartStr,
+      end: newEndStr,
+    });
     this.config.onEventDrop?.(event, newStart, newEnd);
+  }
+
+  private handleEventResize(
+    event: CalendarEvent,
+    newStart: Date,
+    newEnd: Date,
+  ): void {
+    // Convert Date objects to ISO format strings for internal event storage
+    const newStartStr = this.adapter.format(
+      this.adapter.create(newStart),
+      INTERNAL_DATA_FORMAT.dateTime,
+    );
+    const newEndStr = this.adapter.format(
+      this.adapter.create(newEnd),
+      INTERNAL_DATA_FORMAT.dateTime,
+    );
+
+    this.eventManager.updateEvent(event.id, {
+      start: newStartStr,
+      end: newEndStr,
+    });
+    this.config.onEventResize?.(event, newStart, newEnd);
   }
 
   private mergeConfig(config: CalendarConfig): ResolvedCalendarConfig {
@@ -529,6 +565,7 @@ export class Calendar<T = Dayjs> {
     if (config.onEventContextMenu)
       resolved.onEventContextMenu = config.onEventContextMenu;
     if (config.onEventDrop) resolved.onEventDrop = config.onEventDrop;
+    if (config.onEventResize) resolved.onEventResize = config.onEventResize;
     if (config.onViewChange) resolved.onViewChange = config.onViewChange;
     if (config.onDateChange) resolved.onDateChange = config.onDateChange;
     if (config.onDateClick) resolved.onDateClick = config.onDateClick;

@@ -51,7 +51,7 @@ const calendar = new Calendar('#app', {
     console.log('Clicked:', event.title);
   },
   onEventDrop: (event, newStart, newEnd) => {
-    console.log('Moved:', event.title, newStart, newEnd);
+    console.log('Moved:', event.title, newStart.toISOString(), newEnd.toISOString());
   }
 });
 
@@ -134,7 +134,8 @@ interface CalendarConfig {
   onEventClick?: (event: CalendarEvent) => void;
   onEventDoubleClick?: (event: CalendarEvent) => void;
   onEventContextMenu?: (event: CalendarEvent, x: number, y: number) => void;
-  onEventDrop?: (event: CalendarEvent, newStart: string, newEnd: string) => void;
+  onEventDrop?: (event: CalendarEvent, newStart: Date, newEnd: Date) => void;  // v0.8.0+: Changed from string to Date
+  onEventResize?: (event: CalendarEvent, newStart: Date, newEnd: Date) => void;  // v0.9.0+: New callback for resize operations
   
   // View and navigation
   onViewChange?: (viewType: ViewType) => void;
@@ -254,8 +255,20 @@ const calendar = new Calendar('#app', {
     showEventDetails(event);
   },
   onEventDrop: (event, newStart, newEnd) => {
-    // Update in database
-    saveEventToServer(event.id, { start: newStart, end: newEnd });
+    // Event was moved to a new position
+    console.log('Event moved:', event.title);
+    saveEventToServer(event.id, { 
+      start: newStart.toISOString(), 
+      end: newEnd.toISOString() 
+    });
+  },
+  onEventResize: (event, newStart, newEnd) => {
+    // Event duration was changed
+    console.log('Event resized:', event.title);
+    saveEventToServer(event.id, { 
+      start: newStart.toISOString(), 
+      end: newEnd.toISOString() 
+    });
   },
   onViewChange: (view) => {
     analytics.track('view_changed', { view });
