@@ -1,0 +1,323 @@
+/* =============================================================================
+   Swiss Brutalist Calendar Demo Styles
+   ============================================================================= */
+
+/* Calendar Container Override */
+.tg-calendar {
+    height: 100% !important;
+    border: none !important;
+    box-shadow: none !important;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif !important;
+}
+
+.tg-time-grid-container {
+    flex: 1 !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+}
+
+/* Header Brutalist Override */
+.tg-header {
+    border-bottom: 2px solid #000 !important;
+    background: white !important;
+    padding: 16px 24px !important;
+}
+
+.tg-title {
+    font-weight: 900 !important;
+    text-transform: uppercase !important;
+    letter-spacing: -0.5px !important;
+    font-size: 20px !important;
+}
+
+/* View Switch Buttons */
+.tg-view-switch {
+    gap: 4px !important;
+}
+
+.tg-view-btn {
+    border: 2px solid #000 !important;
+    border-radius: 0 !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    background: white !important;
+    box-shadow: 2px 2px 0 0 #000 !important;
+    transition: all 0.1s ease !important;
+    padding: 6px 12px !important;
+}
+
+.tg-view-btn:hover {
+    transform: translate(1px, 1px) !important;
+    box-shadow: 1px 1px 0 0 #000 !important;
+}
+
+.tg-view-btn.tg-active {
+    background: #000 !important;
+    color: #fff !important;
+    box-shadow: none !important;
+    transform: translate(2px, 2px) !important;
+}
+
+/* Navigation Buttons */
+.tg-nav {
+    gap: 8px !important;
+}
+
+.tg-nav-btn {
+    border: 2px solid #000 !important;
+    border-radius: 0 !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    background: white !important;
+    box-shadow: 2px 2px 0 0 #000 !important;
+    transition: all 0.1s ease !important;
+    font-size: 11px !important;
+    padding: 6px 12px !important;
+}
+
+.tg-nav-btn:hover {
+    transform: translate(1px, 1px) !important;
+    box-shadow: 1px 1px 0 0 #000 !important;
+}
+
+.tg-nav-btn.tg-today {
+    background: #ffcc00 !important;
+}
+
+.tg-nav-btn.tg-today:hover {
+    background: #e6b800 !important;
+}
+
+/* Month View Grid */
+.tg-month-header {
+    border-bottom: 2px solid #000 !important;
+    background: #000 !important;
+}
+
+.tg-month-header-cell {
+    color: white !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    font-size: 11px !important;
+    letter-spacing: 0.5px !important;
+    padding: 10px 0 !important;
+    border-right: 2px solid #333 !important;
+}
+
+.tg-month-header-cell:last-child {
+    border-right: none !important;
+}
+
+.tg-month-row {
+    border-bottom: 2px solid #000 !important;
+}
+
+.tg-month-cell {
+    border-right: 2px solid #000 !important;
+}
+
+.tg-month-cell:last-child {
+    border-right: none !important;
+}
+
+.tg-date-number {
+    font-weight: 700 !important;
+    font-size: 13px !important;
+}
+
+.tg-month-cell.tg-today .tg-date-number {
+    background: #ffcc00 !important;
+    color: #000 !important;
+    border-radius: 0 !important;
+    padding: 2px 6px !important;
+}
+
+/* Time View (Week/Day) */
+.tg-time-header {
+    border-bottom: 2px solid #000 !important;
+    background: white !important;
+}
+
+.tg-time-header-cell {
+    border-right: 2px solid #000 !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+}
+
+.tg-time-header-cell:last-child {
+    border-right: none !important;
+}
+
+.tg-time-header-cell.tg-today {
+    background: #ffcc00 !important;
+    color: #000 !important;
+}
+
+.tg-allday-row {
+    border-bottom: 2px solid #000 !important;
+}
+
+.tg-allday-label {
+    border-right: 2px solid #000 !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    font-size: 10px !important;
+    background: #f0f0f0 !important;
+}
+
+.tg-time-body {
+    background: white !important;
+}
+
+.tg-time-axis {
+    border-right: 2px solid #000 !important;
+    background: white !important;
+}
+
+.tg-time-axis-label {
+    font-weight: 700 !important;
+    font-size: 11px !important;
+    color: #000 !important;
+}
+
+.tg-day-column {
+    border-right: 2px solid #000 !important;
+}
+
+.tg-day-column:last-child {
+    border-right: none !important;
+}
+
+/* Events - Brutalist Style */
+.tg-event-base,
+.tg-event-bar,
+.tg-event-block {
+    border: 2px solid #000 !important;
+    border-radius: 0 !important;
+    font-weight: 700 !important;
+    box-shadow: 2px 2px 0 0 rgba(0, 0, 0, 0.3) !important;
+    transition: all 0.1s ease !important;
+}
+
+.tg-event-base:hover,
+.tg-event-bar:hover,
+.tg-event-block:hover {
+    box-shadow: 4px 4px 0 0 rgba(0, 0, 0, 0.5) !important;
+    /*transform: translate(-1px, -1px) !important;*/
+    z-index: 100 !important;
+}
+
+.tg-event-base:active,
+.tg-event-bar:active,
+.tg-event-block:active {
+    box-shadow: none !important;
+    /*transform: translate(2px, 2px) !important;*/
+    cursor: grabbing !important;
+}
+
+.tg-event-title {
+    font-weight: 700 !important;
+    font-size: 11px !important;
+    letter-spacing: 0.3px !important;
+    text-transform: uppercase !important;
+}
+
+.tg-time-text,
+.tg-event-time {
+    font-weight: 700 !important;
+    font-size: 10px !important;
+    opacity: 0.9 !important;
+}
+
+/* Resize Handles */
+.tg-resize-handle,
+.tg-resize-h,
+.tg-resize-v {
+    opacity: 0 !important;
+    transition: opacity 0.1s ease !important;
+}
+
+.tg-event-base:hover .tg-resize-handle,
+.tg-event-base:hover .tg-resize-h,
+.tg-event-base:hover .tg-resize-v {
+    opacity: 1 !important;
+    background: rgba(255, 255, 255, 0.3) !important;
+}
+
+/* Ghost Event (Drag Preview) */
+.tg-ghost-event {
+    background: repeating-linear-gradient(
+        45deg,
+        #ccc,
+        #ccc 5px,
+        #fff 5px,
+        #fff 10px
+    ) !important;
+    border: 2px dashed #000 !important;
+    opacity: 0.6 !important;
+}
+
+/* More Events Indicator */
+.tg-more-events {
+    font-weight: 700 !important;
+    font-size: 10px !important;
+    text-transform: uppercase !important;
+    color: #000 !important;
+    border: 2px solid #000 !important;
+    background: #f0f0f0 !important;
+    padding: 2px 6px !important;
+    cursor: pointer !important;
+}
+
+.tg-more-events:hover {
+    background: #ffcc00 !important;
+}
+
+/* Popover */
+.tg-popover {
+    border: 2px solid #000 !important;
+    border-radius: 0 !important;
+    box-shadow: 4px 4px 0 0 #000 !important;
+    background: white !important;
+}
+
+/* Selection Range */
+.tg-selection-range {
+    background: rgba(43, 79, 255, 0.15) !important;
+    border: 2px dashed #2b4fff !important;
+}
+
+/* Disabled/Hidden Days */
+.tg-month-cell.tg-disabled {
+    background-color: #f3f4f6 !important;
+    background-image: linear-gradient(
+        45deg,
+        #e5e7eb 25%,
+        transparent 25%,
+        transparent 50%,
+        #e5e7eb 50%,
+        #e5e7eb 75%,
+        transparent 75%,
+        transparent
+    ) !important;
+    background-size: 10px 10px !important;
+}
+
+/* Scrollbar Styling */
+.tg-time-grid-container::-webkit-scrollbar {
+    width: 12px !important;
+}
+
+.tg-time-grid-container::-webkit-scrollbar-track {
+    background: #f0f0f0 !important;
+    border-left: 2px solid #000 !important;
+}
+
+.tg-time-grid-container::-webkit-scrollbar-thumb {
+    background: #000 !important;
+    border: 2px solid #f0f0f0 !important;
+}
+
+.tg-time-grid-container::-webkit-scrollbar-thumb:hover {
+    background: #333 !important;
+}

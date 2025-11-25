@@ -5,110 +5,627 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>@taskgenius/calendar Demo</title>
         <style>
+            /* --- Core Style Definition: Swiss International + New Brutalism --- */
+            :root {
+                --brutal-border: 2px solid #000000;
+                --brutal-shadow: 4px 4px 0px 0px #000000;
+                --brutal-shadow-hover: 2px 2px 0px 0px #000000;
+                --swiss-font: "Helvetica Neue", Helvetica, Arial, sans-serif;
+                --accent-yellow: #ffcc00;
+                --accent-blue: #2b4fff;
+                --accent-orange: #ff4800;
+                --accent-green: #00a82d;
+                --bg-gray: #f0f0f0;
+            }
+
             * {
                 box-sizing: border-box;
+                margin: 0;
+                padding: 0;
             }
 
             body {
-                margin: 0;
-                padding: 20px;
-                font-family:
-                    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-                    sans-serif;
-                background: #f3f4f6;
-                min-height: 100vh;
-            }
-
-            .container {
-                max-width: 1200px;
-                margin: 0 auto;
-            }
-
-            h1 {
-                text-align: center;
-                color: #1f2937;
-                margin-bottom: 20px;
-            }
-
-            .demo-controls {
+                font-family: var(--swiss-font);
+                -webkit-font-smoothing: antialiased;
+                background-color: var(--bg-gray);
+                color: #000;
+                height: 100vh;
+                width: 100vw;
+                overflow: hidden;
                 display: flex;
-                gap: 10px;
-                margin-bottom: 20px;
-                flex-wrap: wrap;
             }
 
-            .demo-controls button {
+            /* --- Brutalist Button --- */
+            .btn-brutal {
+                background: white;
+                border: var(--brutal-border);
+                box-shadow: var(--brutal-shadow);
+                font-weight: 700;
+                transition: all 0.1s ease;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                border-radius: 0;
+                cursor: pointer;
+                font-size: 12px;
                 padding: 8px 16px;
-                border: 1px solid #e5e7eb;
-                border-radius: 6px;
+            }
+            .btn-brutal:hover {
+                transform: translate(2px, 2px);
+                box-shadow: var(--brutal-shadow-hover);
+            }
+            .btn-brutal:active,
+            .btn-brutal.active {
+                background: #000;
+                color: #fff;
+                box-shadow: none;
+                transform: translate(4px, 4px);
+            }
+            .btn-brutal.primary {
+                background: var(--accent-yellow);
+            }
+            .btn-brutal.primary:active,
+            .btn-brutal.primary.active {
+                background: #000;
+                color: var(--accent-yellow);
+            }
+
+            /* --- Brutalist Container --- */
+            .box-brutal {
+                background: white;
+                border: var(--brutal-border);
+                box-shadow: var(--brutal-shadow);
+                border-radius: 0;
+            }
+
+            /* --- Brutalist Checkbox --- */
+            .checkbox-brutal {
+                appearance: none;
+                width: 20px;
+                height: 20px;
+                border: 2px solid black;
                 background: white;
                 cursor: pointer;
-                font-size: 14px;
-                transition: all 0.2s;
+                position: relative;
+                flex-shrink: 0;
+            }
+            .checkbox-brutal:checked {
+                background: #000;
+            }
+            .checkbox-brutal:checked::after {
+                content: "";
+                position: absolute;
+                left: 5px;
+                top: 1px;
+                width: 6px;
+                height: 12px;
+                border: solid white;
+                border-width: 0 2px 2px 0;
+                transform: rotate(45deg);
             }
 
-            .demo-controls button:hover {
-                background: #f9fafb;
-                border-color: #d1d5db;
-            }
-
-            .demo-controls button.primary {
-                background: #3b82f6;
-                color: white;
-                border-color: #3b82f6;
-            }
-
-            .demo-controls button.primary:hover {
-                background: #2563eb;
-            }
-
-            #app {
-                display: flex;
-                justify-content: center;
-            }
-
-            .event-log {
-                margin-top: 20px;
-                padding: 16px;
+            /* --- Brutalist Select --- */
+            .select-brutal {
+                appearance: none;
                 background: white;
-                border-radius: 8px;
-                border: 1px solid #e5e7eb;
-            }
-
-            .event-log h3 {
-                margin: 0 0 10px 0;
-                font-size: 14px;
-                color: #6b7280;
-            }
-
-            .event-log pre {
-                margin: 0;
+                border: var(--brutal-border);
+                padding: 8px 32px 8px 12px;
+                font-weight: 700;
                 font-size: 12px;
-                color: #374151;
-                white-space: pre-wrap;
-                max-height: 150px;
+                cursor: pointer;
+                background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23000' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+                background-repeat: no-repeat;
+                background-position: right 10px center;
+                border-radius: 0;
+            }
+            .select-brutal:focus {
+                outline: none;
+                box-shadow: var(--brutal-shadow-hover);
+            }
+
+            /* --- Brutalist Input --- */
+            .input-brutal {
+                border: var(--brutal-border);
+                padding: 8px 12px;
+                font-weight: 700;
+                font-size: 12px;
+                background: white;
+                border-radius: 0;
+            }
+            .input-brutal:focus {
+                outline: none;
+                box-shadow: var(--brutal-shadow-hover);
+            }
+
+            /* --- Layout --- */
+            .layout {
+                display: flex;
+                width: 100%;
+                height: 100%;
+            }
+
+            /* --- Left Sidebar (Config Panel) --- */
+            .sidebar {
+                width: 300px;
+                min-width: 300px;
+                background: white;
+                border-right: var(--brutal-border);
+                display: flex;
+                flex-direction: column;
+                z-index: 50;
+                box-shadow: 4px 0 0 0 rgba(0, 0, 0, 0.1);
+            }
+
+            .sidebar-header {
+                padding: 24px;
+                border-bottom: var(--brutal-border);
+                background: var(--accent-yellow);
+            }
+
+            .sidebar-header h1 {
+                font-size: 24px;
+                font-weight: 900;
+                text-transform: uppercase;
+                letter-spacing: -1px;
+                line-height: 1.1;
+            }
+
+            .sidebar-header .version {
+                font-size: 10px;
+                font-weight: 700;
+                margin-top: 4px;
+                opacity: 0.75;
+                font-family: monospace;
+            }
+
+            .sidebar-content {
+                flex: 1;
                 overflow-y: auto;
+                padding: 24px;
+            }
+
+            .sidebar-footer {
+                padding: 16px;
+                border-top: var(--brutal-border);
+                text-align: center;
+                font-size: 11px;
+                font-family: monospace;
+                background: var(--bg-gray);
+            }
+
+            /* --- Config Sections --- */
+            .config-section {
+                margin-bottom: 32px;
+            }
+
+            .config-section h2 {
+                font-size: 13px;
+                font-weight: 700;
+                text-transform: uppercase;
+                margin-bottom: 16px;
+                padding-bottom: 8px;
+                border-bottom: var(--brutal-border);
+                letter-spacing: 0.5px;
+            }
+
+            .config-row {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                margin-bottom: 12px;
+            }
+
+            .config-row label {
+                font-weight: 700;
+                font-size: 13px;
+            }
+
+            .config-grid {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+            }
+
+            .day-checkbox {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                font-size: 13px;
+                font-weight: 700;
+                cursor: pointer;
+            }
+
+            .btn-group {
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            .btn-group-row {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+            }
+
+            .btn-group .btn-brutal {
+                width: 100%;
+                text-align: left;
+            }
+
+            /* --- Main Content Area --- */
+            .main-content {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                overflow: hidden;
+                background: var(--bg-gray);
+                padding: 24px;
+                gap: 24px;
+            }
+
+            /* --- Calendar Container --- */
+            .calendar-wrapper {
+                flex: 1;
+                min-height: 0;
+                background: white;
+                border: var(--brutal-border);
+                box-shadow: var(--brutal-shadow);
+                overflow: hidden;
+                display: flex;
+                flex-direction: column;
+            }
+
+            .calendar-wrapper > #app {
+                flex: 1;
+                min-height: 0;
+                display: flex;
+                flex-direction: column;
+            }
+
+            /* --- Bottom Panel (Log + Config Copy) --- */
+            .bottom-panel {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 24px;
+                height: 200px;
+                min-height: 200px;
+            }
+
+            .panel-box {
+                background: white;
+                border: var(--brutal-border);
+                box-shadow: var(--brutal-shadow);
+                display: flex;
+                flex-direction: column;
+                overflow: hidden;
+            }
+
+            .panel-header {
+                padding: 12px 16px;
+                border-bottom: var(--brutal-border);
+                background: #000;
+                color: #fff;
+                font-size: 13px;
+                font-weight: 700;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+
+            .panel-header button {
+                background: white;
+                color: #000;
+                border: none;
+                padding: 4px 12px;
+                font-size: 11px;
+                font-weight: 700;
+                text-transform: uppercase;
+                cursor: pointer;
+                transition: all 0.1s;
+            }
+
+            .panel-header button:hover {
+                background: var(--accent-yellow);
+            }
+
+            .panel-content {
+                flex: 1;
+                overflow-y: auto;
+                padding: 12px 16px;
+            }
+
+            /* --- Log Panel --- */
+            .log-content {
+                font-family: "SF Mono", "Monaco", "Inconsolata", monospace;
+                font-size: 14px;
+                line-height: 1.6;
+                white-space: pre-wrap;
+                word-break: break-all;
+                color: #374151;
+            }
+
+            .log-entry {
+                padding: 4px 0;
+                border-bottom: 1px solid #e5e7eb;
+            }
+
+            .log-entry:last-child {
+                border-bottom: none;
+            }
+
+            .log-timestamp {
+                color: #9ca3af;
+                margin-right: 8px;
+            }
+
+            /* --- Config Copy Panel --- */
+            .config-display {
+                font-family: "SF Mono", "Monaco", "Inconsolata", monospace;
+                font-size: 14px;
+                line-height: 1.6;
+                white-space: pre-wrap;
+                background: #f9fafb;
+                padding: 12px;
+                border: 1px solid #e5e7eb;
+                min-height: 100%;
+            }
+
+            /* --- Custom Calendar Overrides for Brutalist Style --- */
+            .calendar-wrapper .tg-calendar {
+                height: 100%;
+                border: none;
+                box-shadow: none;
+                font-family: var(--swiss-font);
+            }
+
+            .calendar-wrapper .tg-header {
+                border-bottom: var(--brutal-border);
+                background: white;
+            }
+
+            .calendar-wrapper .tg-title {
+                font-weight: 900;
+                text-transform: uppercase;
+                letter-spacing: -0.5px;
+            }
+
+            .calendar-wrapper .tg-view-btn,
+            .calendar-wrapper .tg-nav-btn {
+                border: var(--brutal-border);
+                border-radius: 0;
+                font-weight: 700;
+                text-transform: uppercase;
+                transition: all 0.1s ease;
+            }
+
+            .calendar-wrapper .tg-view-btn:hover,
+            .calendar-wrapper .tg-nav-btn:hover {
+                transform: translate(1px, 1px);
+            }
+
+            .calendar-wrapper .tg-view-btn.tg-active {
+                background: #000;
+                color: #fff;
+            }
+
+            /* --- Responsive --- */
+            @media (max-width: 1200px) {
+                .bottom-panel {
+                    grid-template-columns: 1fr;
+                    height: auto;
+                }
+                .panel-box {
+                    height: 180px;
+                }
+            }
+
+            @media (max-width: 900px) {
+                .sidebar {
+                    width: 260px;
+                    min-width: 260px;
+                }
             }
         </style>
     </head>
     <body>
-        <div class="container">
-            <h1>@taskgenius/calendar Demo</h1>
+        <div class="layout">
+            <!-- Left Sidebar: Configuration Panel -->
+            <aside class="sidebar">
+                <div class="sidebar-header">
+                    <h1>DEMO</h1>
+                    <div class="version">TASK GENIUS.MD CALENDAR</div>
+                </div>
 
-            <div class="demo-controls">
-                <button class="primary" onclick="addRandomEvent()">
-                    Add Random Event
-                </button>
-                <button onclick="clearEvents()">Clear Events</button>
-                <button onclick="toggleDrag()">Switch Drag</button>
-            </div>
+                <div class="sidebar-content">
+                    <!-- View Mode Section -->
+                    <section class="config-section">
+                        <h2>View Mode</h2>
+                        <div class="btn-group">
+                            <button
+                                class="btn-brutal"
+                                id="btn-month"
+                                onclick="setView('month')"
+                            >
+                                Month
+                            </button>
+                            <button
+                                class="btn-brutal active"
+                                id="btn-week"
+                                onclick="setView('week')"
+                            >
+                                Week
+                            </button>
+                            <button
+                                class="btn-brutal"
+                                id="btn-day"
+                                onclick="setView('day')"
+                            >
+                                Day
+                            </button>
+                        </div>
+                    </section>
 
-            <div id="app"></div>
+                    <!-- Navigation Section -->
+                    <section class="config-section">
+                        <h2>Navigation</h2>
+                        <div class="btn-group">
+                            <div class="btn-group-row">
+                                <button
+                                    class="btn-brutal"
+                                    onclick="navigate('prev')"
+                                >
+                                    ← Prev
+                                </button>
+                                <button
+                                    class="btn-brutal"
+                                    onclick="navigate('next')"
+                                >
+                                    Next →
+                                </button>
+                            </div>
+                            <button
+                                class="btn-brutal primary"
+                                onclick="navigate('today')"
+                            >
+                                Today
+                            </button>
+                        </div>
+                    </section>
 
-            <div class="event-log">
-                <h3>Log</h3>
-                <pre id="log">Waiting...</pre>
-            </div>
+                    <!-- Display Options Section -->
+                    <section class="config-section">
+                        <h2>Display Options</h2>
+                        <div class="config-row">
+                            <label>Show Weekends</label>
+                            <input
+                                type="checkbox"
+                                id="toggle-weekends"
+                                class="checkbox-brutal"
+                                checked
+                                onchange="toggleWeekends()"
+                            />
+                        </div>
+                        <div class="config-row">
+                            <label>First Day</label>
+                            <select
+                                id="first-day"
+                                class="select-brutal"
+                                onchange="setFirstDay()"
+                            >
+                                <option value="0">Sunday</option>
+                                <option value="1">Monday</option>
+                                <option value="6">Saturday</option>
+                            </select>
+                        </div>
+                        <div class="config-row">
+                            <label>Max Events/Row</label>
+                            <input
+                                type="number"
+                                id="max-events"
+                                class="input-brutal"
+                                value="3"
+                                min="1"
+                                max="10"
+                                style="width: 60px"
+                                onchange="setMaxEvents()"
+                            />
+                        </div>
+                    </section>
+
+                    <!-- Active Days Section -->
+                    <section class="config-section">
+                        <h2>Active Days</h2>
+                        <div class="config-grid" id="days-selector">
+                            <!-- Generated by JS -->
+                        </div>
+                    </section>
+
+                    <!-- Drag Options Section -->
+                    <section class="config-section">
+                        <h2>Drag & Drop</h2>
+                        <div class="config-row">
+                            <label>Enable Drag</label>
+                            <input
+                                type="checkbox"
+                                id="toggle-drag"
+                                class="checkbox-brutal"
+                                checked
+                                onchange="toggleDrag()"
+                            />
+                        </div>
+                        <div class="config-row">
+                            <label>Snap Minutes</label>
+                            <select
+                                id="snap-minutes"
+                                class="select-brutal"
+                                onchange="setSnapMinutes()"
+                            >
+                                <option value="5">5 min</option>
+                                <option value="10">10 min</option>
+                                <option value="15" selected>15 min</option>
+                                <option value="30">30 min</option>
+                                <option value="60">60 min</option>
+                            </select>
+                        </div>
+                    </section>
+
+                    <!-- Event Actions Section -->
+                    <section class="config-section">
+                        <h2>Event Actions</h2>
+                        <div class="btn-group">
+                            <button
+                                class="btn-brutal primary"
+                                onclick="addRandomEvent()"
+                            >
+                                + Add Random Event
+                            </button>
+                            <button class="btn-brutal" onclick="clearEvents()">
+                                Clear All Events
+                            </button>
+                        </div>
+                    </section>
+                </div>
+
+                <div class="sidebar-footer">TEST x TRY</div>
+            </aside>
+
+            <!-- Main Content Area -->
+            <main class="main-content">
+                <!-- Calendar Component -->
+                <div class="calendar-wrapper">
+                    <div id="app"></div>
+                </div>
+
+                <!-- Bottom Panel: Log + Config -->
+                <div class="bottom-panel">
+                    <!-- Event Log Panel -->
+                    <div class="panel-box">
+                        <div class="panel-header">
+                            <span>Event Log</span>
+                            <button onclick="clearLog()">Clear</button>
+                        </div>
+                        <div class="panel-content">
+                            <div class="log-content" id="log">
+                                Waiting for events...
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Config Export Panel -->
+                    <div class="panel-box">
+                        <div class="panel-header">
+                            <span>Current Config</span>
+                            <button onclick="copyConfig()">Copy</button>
+                        </div>
+                        <div class="panel-content">
+                            <pre class="config-display" id="config-display">
+{}</pre
+                            >
+                        </div>
+                    </div>
+                </div>
+            </main>
         </div>
 
         <script type="module" src="/src/main.ts"></script>
