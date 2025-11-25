@@ -449,6 +449,11 @@ export class Calendar<T = Dayjs> {
     newStart: Date,
     newEnd: Date,
   ): void {
+    // IMPORTANT: Call the callback BEFORE updating internal state
+    // because the callback may need to compare old vs new values
+    // and the event object is passed by reference
+    this.config.onEventDrop?.(event, newStart, newEnd);
+
     // Convert Date objects to ISO format strings for internal event storage
     const newStartStr = this.adapter.format(
       this.adapter.create(newStart),
@@ -463,7 +468,6 @@ export class Calendar<T = Dayjs> {
       start: newStartStr,
       end: newEndStr,
     });
-    this.config.onEventDrop?.(event, newStart, newEnd);
   }
 
   private handleEventResize(
@@ -471,6 +475,11 @@ export class Calendar<T = Dayjs> {
     newStart: Date,
     newEnd: Date,
   ): void {
+    // IMPORTANT: Call the callback BEFORE updating internal state
+    // because the callback may need to compare old vs new values
+    // and the event object is passed by reference
+    this.config.onEventResize?.(event, newStart, newEnd);
+
     // Convert Date objects to ISO format strings for internal event storage
     const newStartStr = this.adapter.format(
       this.adapter.create(newStart),
@@ -485,7 +494,6 @@ export class Calendar<T = Dayjs> {
       start: newStartStr,
       end: newEndStr,
     });
-    this.config.onEventResize?.(event, newStart, newEnd);
   }
 
   private mergeConfig(config: CalendarConfig): ResolvedCalendarConfig {

@@ -8,24 +8,24 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
+      "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
-      "require": "./dist/index.cjs",
-      "types": "./dist/index.d.ts"
+      "require": "./dist/index.cjs"
     },
     "./dayjs": {
+      "types": "./dist/adapters/dayjs.d.ts",
       "import": "./dist/adapters/dayjs.js",
-      "require": "./dist/adapters/dayjs.cjs",
-      "types": "./dist/adapters/dayjs.d.ts"
+      "require": "./dist/adapters/dayjs.cjs"
     },
     "./native": {
+      "types": "./dist/adapters/native.d.ts",
       "import": "./dist/adapters/native.js",
-      "require": "./dist/adapters/native.cjs",
-      "types": "./dist/adapters/native.d.ts"
+      "require": "./dist/adapters/native.cjs"
     },
     "./date-fns": {
+      "types": "./dist/adapters/date-fns.d.ts",
       "import": "./dist/adapters/date-fns.js",
-      "require": "./dist/adapters/date-fns.cjs",
-      "types": "./dist/adapters/date-fns.d.ts"
+      "require": "./dist/adapters/date-fns.cjs"
     },
     "./styles.css": {
       "default": "./dist/styles.css"
@@ -39,6 +39,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
+    "prepare": "npm run build",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
@@ -49,7 +50,7 @@
   },
   "peerDependencies": {
     "dayjs": "^1.11.0",
-    "date-fns": "^2.30.0 || ^3.0.0"
+    "date-fns": "^2.30.0 || ^3.0.0 || ^4.0.0"
   },
   "peerDependenciesMeta": {
     "dayjs": {
