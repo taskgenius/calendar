@@ -1,0 +1,137 @@
+/**
+ * Base styles - CSS variables, container, header, navigation
+ */
+
+.tg-calendar {
+    /* CSS Variables */
+    --tg-primary-color: #3b82f6;
+    --tg-primary-rgb: 59, 130, 246;
+    --tg-cell-height: 60px;
+    --tg-font-header: 14px;
+    --tg-font-event: 12px;
+
+    /* Base styles */
+    font-family:
+        -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    user-select: none;
+    overflow-x: hidden;
+
+    /* Main container layout */
+    width: 100%;
+    max-width: 1200px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e5e7eb;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    max-height: 100%;
+}
+
+/* Disable text selection during range selection */
+.tg-calendar.tg-selecting {
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+}
+
+/* View container */
+.tg-view-container {
+    min-height: 0;
+    background: white;
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+}
+
+/* Header styles */
+.tg-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px;
+    border-bottom: 1px solid #e5e7eb;
+    background: white;
+}
+
+.tg-title {
+    font-size: 1.25rem;
+    font-weight: bold;
+    color: #1f2937;
+}
+
+/* View switch buttons */
+.tg-view-switch {
+    display: flex;
+    background: #f3f4f6;
+    padding: 4px;
+    border-radius: 8px;
+}
+
+.tg-view-btn {
+    padding: 4px 12px;
+    font-size: 14px;
+    border-radius: 6px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: #6b7280;
+}
+
+.tg-view-btn:hover {
+    color: #374151;
+}
+
+.tg-view-btn.tg-active {
+    background: white;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    color: var(--tg-primary-color);
+    font-weight: 500;
+}
+
+/* Navigation buttons */
+.tg-nav {
+    display: flex;
+    gap: 8px;
+}
+
+.tg-nav-btn {
+    padding: 4px 12px;
+    font-size: 14px;
+    border-radius: 4px;
+    border: 1px solid #e5e7eb;
+    background: #f9fafb;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.tg-nav-btn:hover {
+    background: #f3f4f6;
+}
+
+.tg-nav-btn.tg-today {
+    background: rgba(var(--tg-primary-rgb), 0.1);
+    color: var(--tg-primary-color);
+    border-color: rgba(var(--tg-primary-rgb), 0.2);
+}
+
+.tg-nav-btn.tg-today:hover {
+    background: rgba(var(--tg-primary-rgb), 0.2);
+}
+
+/* Grid layout helpers */
+.tg-grid-7 {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+}
+
+/* Disabled state */
+.tg-disabled {
+    opacity: 0.5;
+    pointer-events: none;
+    cursor: not-allowed;
+}

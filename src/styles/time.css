@@ -1,0 +1,125 @@
+/**
+ * Time view (week/day) styles
+ */
+
+/* Time grid container */
+.tg-time-grid-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow-y: auto;
+    position: relative;
+    scroll-behavior: auto;
+}
+
+/* Time header */
+.tg-time-header {
+    display: flex;
+    padding-left: 60px;
+    border-bottom: 1px solid #e5e7eb;
+    position: sticky;
+    top: 0;
+    background: white;
+    z-index: 30;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+}
+
+.tg-time-header-cell {
+    flex: 1;
+    text-align: center;
+    padding: 8px;
+    border-right: 1px solid #f3f4f6;
+    font-size: var(--tg-font-header);
+}
+
+.tg-time-header-cell .tg-header-date {
+    font-weight: bold;
+    font-size: 18px;
+}
+
+.tg-time-header-cell.tg-today {
+    background-color: rgba(var(--tg-primary-rgb), 0.1);
+    color: var(--tg-primary-color);
+}
+
+.tg-time-header-cell.tg-disabled {
+    opacity: 0.5;
+    pointer-events: none;
+    background-color: #f9fafb;
+}
+
+/* Time body */
+.tg-time-body {
+    display: flex;
+    position: relative;
+    min-height: calc(var(--tg-cell-height) * 24);
+}
+
+/* Time axis */
+.tg-time-axis {
+    width: 60px;
+    flex-shrink: 0;
+    background: #fafafa;
+    border-right: 1px solid #e5e7eb;
+    position: sticky;
+    left: 0;
+    z-index: 20;
+    height: 100%;
+}
+
+.tg-time-axis-label {
+    position: absolute;
+    width: 100%;
+    height: var(--tg-cell-height);
+    text-align: right;
+    padding-right: 8px;
+    color: #9ca3af;
+    font-size: 11px;
+    pointer-events: none;
+    /* Use transform for GPU-accelerated positioning */
+    will-change: transform;
+}
+
+.tg-time-axis-label.custom {
+    font-weight: bold;
+}
+
+/* Day columns */
+.tg-day-column {
+    flex: 1;
+    position: relative;
+    border-right: 1px solid #e5e7eb;
+    background: repeating-linear-gradient(
+        to bottom,
+        transparent 0,
+        transparent calc(var(--tg-cell-height) - 1px),
+        #f3f4f6 var(--tg-cell-height)
+    );
+}
+
+/* Range preview for time view */
+.tg-time-range-preview {
+    position: absolute;
+    background-color: rgba(var(--tg-primary-rgb), 0.15);
+    border: 2px dashed rgba(var(--tg-primary-rgb), 0.8);
+    pointer-events: none;
+    z-index: 15;
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+
+/* Column-level range preview for multi-day selection */
+.tg-day-column.tg-range-preview {
+    background-color: rgba(var(--tg-primary-rgb), 0.08);
+    position: relative;
+}
+
+.tg-day-column.tg-range-preview::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-left: 3px solid rgba(var(--tg-primary-rgb), 0.5);
+    border-right: 3px solid rgba(var(--tg-primary-rgb), 0.5);
+    pointer-events: none;
+    box-sizing: border-box;
+}

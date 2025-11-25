@@ -13,7 +13,7 @@ import type {
 } from "../types";
 import type { MonthEngine } from "../engines/MonthEngine";
 import type { DragController } from "../core/DragController";
-import { createElement, setStyles, clearElement } from "../utils/dom";
+import { createElement, clearElement } from "../utils/dom";
 
 /**
  * Renders the month view calendar
@@ -34,11 +34,11 @@ export class MonthRenderer<T> {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _dateFormats: Required<DateFormatConfig>,
     private onRenderDateCell?: (
-      ctx: import("../types").DateCellContext,
+      ctx: import("../types").DateCellContext
     ) => void,
     private onStyleEvent?: (
-      event: CalendarEvent,
-    ) => import("../types").EventStyle,
+      event: CalendarEvent
+    ) => import("../types").EventStyle
   ) {}
 
   /**
@@ -51,7 +51,7 @@ export class MonthRenderer<T> {
     dragController: DragController<T>,
     renderCallback: () => void,
     onEventClick?: (event: CalendarEvent) => void,
-    dayFilter?: (date: T, context: DayFilterContext) => DayFilterResult,
+    dayFilter?: (date: T, context: DayFilterContext) => DayFilterResult
   ): void {
     clearElement(container);
 
@@ -64,8 +64,7 @@ export class MonthRenderer<T> {
 
     // Render body with weeks
     const body = createElement("div", "tg-month-body");
-    body.style.overflowY = "auto";
-    body.style.height = "600px";
+    // body.style.height = "600px";
 
     for (const weekDays of weeks) {
       const row = this.renderWeekRow(
@@ -75,7 +74,7 @@ export class MonthRenderer<T> {
         dragController,
         renderCallback,
         onEventClick,
-        dayFilter,
+        dayFilter
       );
       body.appendChild(row);
     }
@@ -102,9 +101,9 @@ export class MonthRenderer<T> {
       dayNames.push(allDayNames[dayIndex]!);
     }
 
-    // Apply dynamic grid layout
-    header.style.display = "grid";
-    header.style.gridTemplateColumns = `repeat(${dayNames.length}, 1fr)`;
+    // Apply dynamic grid layout via CSS custom property
+    header.style.setProperty("--tg-grid-columns", String(dayNames.length));
+    header.style.gridTemplateColumns = `repeat(var(--tg-grid-columns), 1fr)`;
 
     for (const name of dayNames) {
       const cell = createElement("div", "tg-month-header-cell");
@@ -122,17 +121,15 @@ export class MonthRenderer<T> {
     dragController: DragController<T>,
     renderCallback: () => void,
     onEventClick?: (event: CalendarEvent) => void,
-    dayFilter?: (date: T, context: DayFilterContext) => DayFilterResult,
+    dayFilter?: (date: T, context: DayFilterContext) => DayFilterResult
   ): HTMLElement {
     const row = createElement("div", "tg-month-row");
     row.dataset["date"] = weekDays[0]!.dateStr;
     const columnCount = weekDays.length;
 
-    // Apply dynamic grid layout
-    row.style.display = "grid";
-    row.style.gridTemplateColumns = `repeat(${weekDays.length}, 1fr)`;
-    row.style.position = "relative";
-    row.style.minHeight = "100px";
+    // Apply dynamic grid layout via CSS custom property
+    row.style.setProperty("--tg-grid-columns", String(weekDays.length));
+    row.style.gridTemplateColumns = `repeat(var(--tg-grid-columns), 1fr)`;
 
     // Render date cells
     for (const day of weekDays) {
@@ -151,7 +148,7 @@ export class MonthRenderer<T> {
         columnCount,
         dragController,
         renderCallback,
-        onEventClick,
+        onEventClick
       );
       row.appendChild(eventEl);
     }
@@ -163,10 +160,9 @@ export class MonthRenderer<T> {
     day: { date: T; dateStr: string },
     currentDate: T,
     events: CalendarEvent[],
-    dayFilter?: (date: T, context: DayFilterContext) => DayFilterResult,
+    dayFilter?: (date: T, context: DayFilterContext) => DayFilterResult
   ): HTMLElement {
     const cell = createElement("div", "tg-month-cell");
-    cell.style.padding = "4px";
 
     const dateNum = createElement("div", "tg-date-number");
     dateNum.textContent = String(this.adapter.date(day.date));
@@ -201,11 +197,9 @@ export class MonthRenderer<T> {
         if (config.style) {
           Object.assign(cell.style, config.style);
         }
-        // Apply disabled state
+        // Apply disabled state (styles defined in CSS)
         if (config.disabled) {
           cell.classList.add("tg-disabled");
-          cell.style.pointerEvents = "none";
-          cell.style.opacity = "0.5";
         }
       }
     }
@@ -248,7 +242,7 @@ export class MonthRenderer<T> {
       const dateObj = new Date(
         this.adapter.year(day.date),
         this.adapter.month(day.date),
-        this.adapter.date(day.date),
+        this.adapter.date(day.date)
       );
       this.onRenderDateCell({
         date: dateObj,
@@ -269,7 +263,7 @@ export class MonthRenderer<T> {
     columnCount: number,
     dragController: DragController<T>,
     renderCallback: () => void,
-    onEventClick?: (event: CalendarEvent) => void,
+    onEventClick?: (event: CalendarEvent) => void
   ): HTMLElement {
     const el = createElement("div", "tg-event-base tg-event-bar");
     el.textContent = item.event.title;
@@ -295,13 +289,15 @@ export class MonthRenderer<T> {
     // Calculate column width percentage based on actual number of visible columns
     const colWidth = 100 / columnCount;
 
-    // Set position and size
-    setStyles(el, {
-      left: `calc(${item.startIdx * colWidth}% + 2px)`,
-      width: `calc(${item.span * colWidth}% - 4px)`,
-      top: `${26 + item.slot * 28}px`,
-      backgroundColor: bgColor,
-    });
+    // Calculate position values
+    const xOffset = item.startIdx * colWidth;
+    const yOffset = 26 + item.slot * 28;
+
+    // Use transform for GPU-accelerated positioning
+    // Width uses calc() for precise sizing with margins
+    el.style.transform = `translate(calc(${xOffset}% + 2px), ${yOffset}px)`;
+    el.style.width = `calc(${item.span * colWidth}% - 4px)`;
+    el.style.backgroundColor = bgColor;
 
     if (customOpacity !== undefined) {
       el.style.opacity = customOpacity.toString();
@@ -311,7 +307,7 @@ export class MonthRenderer<T> {
     if (item.isStart) {
       const leftHandle = createElement(
         "div",
-        "tg-resize-handle tg-resize-h tg-left",
+        "tg-resize-handle tg-resize-h tg-left"
       );
       el.appendChild(leftHandle);
     }
@@ -319,7 +315,7 @@ export class MonthRenderer<T> {
     if (item.isEnd) {
       const rightHandle = createElement(
         "div",
-        "tg-resize-handle tg-resize-h tg-right",
+        "tg-resize-handle tg-resize-h tg-right"
       );
       el.appendChild(rightHandle);
     }

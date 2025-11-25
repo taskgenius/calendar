@@ -16,7 +16,7 @@ import type {
 } from "../types";
 import type { TimeEngine } from "../engines/TimeEngine";
 import type { DragController } from "../core/DragController";
-import { createElement, setStyles, clearElement } from "../utils/dom";
+import { createElement, clearElement } from "../utils/dom";
 
 /**
  * Renders the week/day time view calendar
@@ -111,7 +111,7 @@ export class TimeRenderer<T> {
     dayFilter?: (date: T, context: DayFilterContext) => DayFilterResult,
   ): HTMLElement {
     const header = createElement("div", "tg-time-header");
-    header.style.paddingLeft = "60px";
+    // padding-left is defined in CSS
 
     // Weekday labels: Sunday through Saturday
     const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -148,19 +148,23 @@ export class TimeRenderer<T> {
         }
       }
 
-      // Highlight today (default styling)
+      // Highlight today using CSS class (default styling when no dayFilter)
       if (isToday && !dayFilter) {
-        cell.style.backgroundColor = "rgba(59, 130, 246, 0.1)";
-        cell.style.color = "#3b82f6";
+        cell.classList.add("tg-today");
       }
 
       const dayName = dayNames[dayOfWeek];
       const dateNum = this.adapter.date(col.date);
 
-      cell.innerHTML = `
-        <div>${dayName}</div>
-        <div style="font-weight: bold; font-size: 18px;">${dateNum}</div>
-      `;
+      // Use CSS classes instead of inline styles
+      const dayNameEl = createElement("div");
+      dayNameEl.textContent = dayName!;
+
+      const dateNumEl = createElement("div", "tg-header-date");
+      dateNumEl.textContent = String(dateNum);
+
+      cell.appendChild(dayNameEl);
+      cell.appendChild(dateNumEl);
 
       header.appendChild(cell);
     }
@@ -192,11 +196,9 @@ export class TimeRenderer<T> {
         label.classList.add(slot.config.className);
       }
 
-      // Position based on slot index (not hour) to account for filtered hours
-      setStyles(label, {
-        position: "absolute",
-        top: `${slotIndex * this.theme.cellHeight}px`,
-      });
+      // Use transform for GPU-accelerated positioning
+      const yOffset = slotIndex * this.theme.cellHeight;
+      label.style.transform = `translateY(${yOffset}px)`;
       axis.appendChild(label);
     }
 
@@ -214,9 +216,11 @@ export class TimeRenderer<T> {
     const col = createElement("div", "tg-day-column");
     col.dataset["date"] = colData.dateStr;
 
-    // Adjust height based on visible time slots
+    // Set height via CSS custom property for dynamic time slots
     if (timeSlots && timeSlots.length > 0) {
-      col.style.height = `${timeSlots.length * this.theme.cellHeight}px`;
+      const height = timeSlots.length * this.theme.cellHeight;
+      col.style.setProperty("--tg-column-height", `${height}px`);
+      col.style.height = "var(--tg-column-height)";
     }
 
     // Calculate layout for events on this day
@@ -261,14 +265,12 @@ export class TimeRenderer<T> {
       }
     }
 
-    // Set position and size
-    setStyles(el, {
-      top: `${item.top}px`,
-      height: `${item.height}px`,
-      width: `calc(${item.widthPercent}% - 2px)`,
-      left: `${item.leftPercent}%`,
-      backgroundColor: bgColor,
-    });
+    // Use transform for GPU-accelerated positioning
+    // translateX uses percentage for responsive width positioning
+    el.style.transform = `translate(${item.leftPercent}%, ${item.top}px)`;
+    el.style.width = `calc(${item.widthPercent}% - 2px)`;
+    el.style.height = `${item.height}px`;
+    el.style.backgroundColor = bgColor;
 
     if (customOpacity !== undefined) {
       el.style.opacity = customOpacity.toString();

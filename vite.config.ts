@@ -8,12 +8,27 @@ const emitStyles = (): Plugin => ({
   name: "emit-calendar-styles",
   apply: "build",
   generateBundle() {
-    const cssPath = resolve(__dirname, "src/styles/styles.css");
-    const css = fs.readFileSync(cssPath, "utf-8");
+    const stylesDir = resolve(__dirname, "src/styles");
+    // Define CSS files in order (base first, then components)
+    const cssFiles = [
+      "base.css",
+      "month.css",
+      "time.css",
+      "events.css",
+    ];
+
+    const cssContents: string[] = [];
+    for (const file of cssFiles) {
+      const filePath = resolve(stylesDir, file);
+      if (fs.existsSync(filePath)) {
+        cssContents.push(`/* === ${file} === */\n${fs.readFileSync(filePath, "utf-8")}`);
+      }
+    }
+
     this.emitFile({
       type: "asset",
       fileName: "styles.css",
-      source: css,
+      source: cssContents.join("\n\n"),
     });
   },
 });

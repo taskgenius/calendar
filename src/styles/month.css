@@ -1,0 +1,106 @@
+/**
+ * Month view styles
+ */
+
+/* Month body container */
+.tg-month-body {
+    overflow-y: auto;
+}
+
+/* Month header */
+.tg-month-header {
+    display: grid;
+    border-bottom: 1px solid #e5e7eb;
+    background: #f9fafb;
+}
+
+.tg-month-header-cell {
+    padding: 8px;
+    text-align: center;
+    font-size: 12px;
+    font-weight: bold;
+    color: #9ca3af;
+}
+
+/* Month row - uses CSS custom properties for dynamic grid */
+.tg-month-row {
+    display: grid;
+    position: relative;
+    min-height: 100px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+/* Month cell */
+.tg-month-cell {
+    height: 100%;
+    padding: 4px;
+    border-right: 1px solid #e5e7eb;
+    position: relative;
+    z-index: 1;
+}
+
+.tg-month-cell:last-child {
+    border-right: none;
+}
+
+/* Date number in month cell */
+.tg-date-number {
+    text-align: right;
+    font-size: 12px;
+    padding: 4px;
+}
+
+.tg-date-number.tg-current-month {
+    color: #374151;
+}
+
+.tg-date-number.tg-other-month {
+    color: #d1d5db;
+}
+
+.tg-date-number.tg-today {
+    color: var(--tg-primary-color);
+    font-weight: bold;
+}
+
+/* Event count badge */
+.tg-event-count-badge {
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    background: var(--tg-primary-color);
+    color: white;
+    border-radius: 10px;
+    padding: 2px 6px;
+    font-size: 10px;
+    font-weight: bold;
+    min-width: 18px;
+    text-align: center;
+}
+
+/* Disabled month cell */
+.tg-month-cell.tg-disabled {
+    opacity: 0.5;
+    pointer-events: none;
+    background-color: #f9fafb;
+}
+
+.tg-month-cell.tg-disabled .tg-date-number {
+    color: #9ca3af;
+    text-decoration: line-through;
+}
+
+/* Range preview for month view */
+.tg-month-cell.tg-range-preview {
+    background-color: rgba(var(--tg-primary-rgb), 0.15);
+    position: relative;
+}
+
+.tg-month-cell.tg-range-preview::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border: 2px solid rgba(var(--tg-primary-rgb), 0.4);
+    pointer-events: none;
+    box-sizing: border-box;
+}

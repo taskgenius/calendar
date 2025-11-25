@@ -1,0 +1,21 @@
+{
+  "git": {
+    "commitMessage": "chore(release): bump version to ${version}",
+    "tagName": "v${version}",
+    "tagAnnotation": "Release ${version}",
+    "requireCleanWorkingDir": false,
+    "requireBranch": false,
+    "push": true,
+    "pushArgs": ["--follow-tags"]
+  },
+  "npm": {
+    "publish": false
+  },
+  "github": {
+    "release": false
+  },
+  "hooks": {
+    "before:init": ["npm run test"],
+    "after:bump": ["npm run build"]
+  }
+}
