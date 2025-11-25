@@ -13,6 +13,7 @@ import type {
   DayFilterResult,
   TimeFilterResult,
   TimeSlotConfig,
+  AllDayLayoutItem,
 } from "../types";
 
 /**
@@ -216,6 +217,169 @@ export class TimeEngine<T> {
     const start = this.adapter.parse(event.start);
     const end = this.adapter.parse(event.end);
     return this.adapter.isSame(start, end, "day");
+  }
+
+  /**
+   * Check if an event is an all-day event
+   * An event is considered all-day if:
+   * - Start and end times are both 00:00 (same day or next day)
+   * - Duration covers the entire day (00:00 to 23:59 or similar)
+   *
+   * @param event - Calendar event
+   * @returns true if event is all-day
+   */
+  isAllDayEvent(event: CalendarEvent): boolean {
+    const start = this.adapter.parse(event.start);
+    const end = this.adapter.parse(event.end);
+
+    const startHour = this.adapter.hour(start);
+    const startMinute = this.adapter.minute(start);
+    const endHour = this.adapter.hour(end);
+    const endMinute = this.adapter.minute(end);
+
+    // Case 1: Both start and end are 00:00 (common pattern for all-day events)
+    if (
+      startHour === 0 &&
+      startMinute === 0 &&
+      endHour === 0 &&
+      endMinute === 0
+    ) {
+      return true;
+    }
+
+    // Case 2: Starts at 00:00 and ends at 23:59 (or close to midnight)
+    if (
+      startHour === 0 &&
+      startMinute === 0 &&
+      endHour === 23 &&
+      endMinute >= 59
+    ) {
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Calculate layout for all-day events across visible columns
+   * Handles multi-day spanning events similar to MonthEngine
+   *
+   * @param allDayEvents - Array of all-day events
+   * @param columns - Array of visible columns (from generateColumns)
+   * @returns Array of AllDayLayoutItem with positioning information
+   */
+  calculateAllDayLayout(
+    allDayEvents: CalendarEvent[],
+    columns: Array<TimeColumn<T>>,
+  ): AllDayLayoutItem[] {
+    if (columns.length === 0 || allDayEvents.length === 0) {
+      return [];
+    }
+
+    // Build a map of dateStr to column index for quick lookup
+    const dateToColIdx = new Map<string, number>();
+    for (let i = 0; i < columns.length; i++) {
+      dateToColIdx.set(columns[i]!.dateStr, i);
+    }
+
+    const firstColDate = columns[0]!.date;
+    const lastColDate = columns[columns.length - 1]!.date;
+
+    // Filter events that overlap with the visible columns range
+    const visibleEvents = allDayEvents.filter((event) => {
+      const eventStart = this.adapter.startOf(
+        this.adapter.parse(event.start),
+        "day",
+      );
+      const eventEnd = this.adapter.startOf(
+        this.adapter.parse(event.end),
+        "day",
+      );
+
+      return (
+        !this.adapter.isAfter(eventStart, lastColDate, "day") &&
+        !this.adapter.isBefore(eventEnd, firstColDate, "day")
+      );
+    });
+
+    // Calculate visual items with positioning
+    const visualItems: Array<AllDayLayoutItem & { sortKey: number }> =
+      visibleEvents.map((event) => {
+        const eventStart = this.adapter.startOf(
+          this.adapter.parse(event.start),
+          "day",
+        );
+        const eventEnd = this.adapter.startOf(
+          this.adapter.parse(event.end),
+          "day",
+        );
+
+        // Clamp to visible column boundaries
+        const displayStart = this.adapter.isBefore(eventStart, firstColDate)
+          ? firstColDate
+          : eventStart;
+        const displayEnd = this.adapter.isAfter(eventEnd, lastColDate)
+          ? lastColDate
+          : eventEnd;
+
+        // Find start column index
+        const displayStartStr = this.adapter.format(
+          displayStart,
+          this.dateFormats.date,
+        );
+        let startIdx = dateToColIdx.get(displayStartStr) ?? 0;
+
+        // Calculate span by counting columns from startIdx to end date
+        let span = 0;
+        for (let i = startIdx; i < columns.length; i++) {
+          const colDate = columns[i]!.date;
+          if (
+            this.adapter.isBefore(colDate, displayStart, "day") ||
+            this.adapter.isAfter(colDate, displayEnd, "day")
+          ) {
+            break;
+          }
+          span++;
+        }
+
+        // Ensure at least 1 span
+        span = Math.max(1, span);
+
+        return {
+          event,
+          startIdx,
+          span,
+          slot: 0, // Will be calculated below
+          isStart: !this.adapter.isBefore(eventStart, firstColDate, "day"),
+          isEnd: !this.adapter.isAfter(eventEnd, lastColDate, "day"),
+          // Sort key: start index first, then by span (longer events first)
+          sortKey: startIdx * 1000 - span,
+        };
+      });
+
+    // Sort by start index, then by span (descending)
+    visualItems.sort((a, b) => a.sortKey - b.sortKey);
+
+    // Allocate vertical slots to prevent overlap (same as MonthEngine)
+    const slots: number[] = [];
+
+    for (const item of visualItems) {
+      let slotIdx = 0;
+
+      // Find first available slot
+      while (true) {
+        const slotEnd = slots[slotIdx];
+        if (slotEnd === undefined || slotEnd < item.startIdx) {
+          slots[slotIdx] = item.startIdx + item.span - 1;
+          item.slot = slotIdx;
+          break;
+        }
+        slotIdx++;
+      }
+    }
+
+    // Remove sortKey from result
+    return visualItems.map(({ sortKey: _sortKey, ...item }) => item);
   }
 
   /**

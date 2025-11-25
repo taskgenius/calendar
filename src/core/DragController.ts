@@ -56,10 +56,30 @@ export class DragController<T> {
       if (!this.config.enabled) return;
       e.stopPropagation();
 
+      // Support both month view rows and all-day section
       const row = el.closest(".tg-month-row") as HTMLElement | null;
-      if (!row) return;
+      const allDayContainer = el.closest(
+        ".tg-allday-events-container",
+      ) as HTMLElement | null;
 
-      const cellW = row.offsetWidth / 7;
+      let cellW: number;
+      let columnCount: number;
+
+      if (row) {
+        // Month view
+        cellW = row.offsetWidth / 7;
+        columnCount = 7;
+      } else if (allDayContainer) {
+        // All-day section in time view
+        const columnsVar = allDayContainer.style.getPropertyValue(
+          "--tg-allday-columns",
+        );
+        columnCount = parseInt(columnsVar, 10) || 7;
+        cellW = allDayContainer.offsetWidth / columnCount;
+      } else {
+        return;
+      }
+
       let mode: DragMode = "move";
 
       const target = e.target as HTMLElement;
@@ -227,21 +247,65 @@ export class DragController<T> {
 
   private handleMonthMove(e: MouseEvent): void {
     const s = this.state!;
+
+    // Support both month view rows and all-day section
     const row = document
       .elementFromPoint(e.clientX, e.clientY)
       ?.closest(".tg-month-row") as HTMLElement | null;
+    const allDayContainer = document
+      .elementFromPoint(e.clientX, e.clientY)
+      ?.closest(".tg-allday-events-container") as HTMLElement | null;
 
-    if (!row?.dataset["date"]) return;
+    let hoverDate: T;
 
-    const rowStart = this.adapter.parse(row.dataset["date"]);
-    const cellIdx = Math.floor(
-      (e.clientX - row.getBoundingClientRect().left) / (s.cellW || 1),
-    );
-    const hoverDate = this.adapter.add(
-      rowStart,
-      Math.max(0, Math.min(6, cellIdx)),
-      "day",
-    );
+    if (row?.dataset["date"]) {
+      // Month view row
+      const rowStart = this.adapter.parse(row.dataset["date"]);
+      const cellIdx = Math.floor(
+        (e.clientX - row.getBoundingClientRect().left) / (s.cellW || 1),
+      );
+      hoverDate = this.adapter.add(
+        rowStart,
+        Math.max(0, Math.min(6, cellIdx)),
+        "day",
+      );
+    } else if (allDayContainer) {
+      // All-day section - find which column we're over
+      const rect = allDayContainer.getBoundingClientRect();
+      const columnsVar = allDayContainer.style.getPropertyValue(
+        "--tg-allday-columns",
+      );
+      const columnCount = parseInt(columnsVar, 10) || 7;
+      const colWidth = rect.width / columnCount;
+      const colIdx = Math.floor((e.clientX - rect.left) / colWidth);
+
+      // Find the header to get date info
+      const header = allDayContainer
+        .closest(".tg-time-view, .tg-calendar")
+        ?.querySelector(".tg-time-header");
+      const headerCells = header?.querySelectorAll(".tg-time-header-cell");
+
+      if (headerCells && headerCells.length > 0) {
+        // Get base date from the first day column
+        const dayColumn = document.querySelector(
+          ".tg-day-column[data-date]",
+        ) as HTMLElement | null;
+        if (dayColumn?.dataset["date"]) {
+          const baseDate = this.adapter.parse(dayColumn.dataset["date"]);
+          hoverDate = this.adapter.add(
+            baseDate,
+            Math.max(0, Math.min(columnCount - 1, colIdx)),
+            "day",
+          );
+        } else {
+          return;
+        }
+      } else {
+        return;
+      }
+    } else {
+      return;
+    }
 
     let newStart = s.startDate;
     let newEnd = s.endDate;
@@ -395,34 +459,91 @@ export class DragController<T> {
     // Remove existing ghosts
     querySelectorAll(".tg-ghost-event").forEach((el) => el.remove());
 
+    // Try month view rows first
     const rows = querySelectorAll<HTMLElement>(".tg-month-row");
 
-    for (const row of rows) {
-      if (!row.dataset["date"]) continue;
+    if (rows.length > 0) {
+      // Month view ghost rendering
+      for (const row of rows) {
+        if (!row.dataset["date"]) continue;
 
-      const rStart = this.adapter.parse(row.dataset["date"]);
-      const rEnd = this.adapter.add(rStart, 6, "day");
+        const rStart = this.adapter.parse(row.dataset["date"]);
+        const rEnd = this.adapter.add(rStart, 6, "day");
 
-      // Check if event overlaps this row
+        // Check if event overlaps this row
+        if (
+          !this.adapter.isBefore(end, rStart) &&
+          !this.adapter.isAfter(start, rEnd)
+        ) {
+          const dStart = this.adapter.isBefore(start, rStart) ? rStart : start;
+          const dEnd = this.adapter.isAfter(end, rEnd) ? rEnd : end;
+
+          const left = this.adapter.diff(dStart, rStart, "day") * 14.2857;
+          const width = (this.adapter.diff(dEnd, dStart, "day") + 1) * 14.2857;
+
+          const ghost = createElement("div", "tg-ghost-event");
+          setStyles(ghost, {
+            left: `${left}%`,
+            width: `${width}%`,
+            top: "30px",
+            height: "26px",
+          });
+
+          row.appendChild(ghost);
+        }
+      }
+    } else {
+      // All-day section ghost rendering
+      const allDayContainer = document.querySelector(
+        ".tg-allday-events-container",
+      ) as HTMLElement | null;
+
+      if (!allDayContainer) return;
+
+      const columnsVar = allDayContainer.style.getPropertyValue(
+        "--tg-allday-columns",
+      );
+      const columnCount = parseInt(columnsVar, 10) || 7;
+
+      // Get first day column to determine date range
+      const dayColumns = querySelectorAll<HTMLElement>(
+        ".tg-day-column[data-date]",
+      );
+      if (dayColumns.length === 0) return;
+
+      const firstColDateStr = dayColumns[0]?.dataset["date"];
+      const lastColDateStr = dayColumns[dayColumns.length - 1]?.dataset["date"];
+      if (!firstColDateStr || !lastColDateStr) return;
+
+      const firstColDate = this.adapter.parse(firstColDateStr);
+      const lastColDate = this.adapter.parse(lastColDateStr);
+
+      // Check if event overlaps visible range
       if (
-        !this.adapter.isBefore(end, rStart) &&
-        !this.adapter.isAfter(start, rEnd)
+        !this.adapter.isBefore(end, firstColDate, "day") &&
+        !this.adapter.isAfter(start, lastColDate, "day")
       ) {
-        const dStart = this.adapter.isBefore(start, rStart) ? rStart : start;
-        const dEnd = this.adapter.isAfter(end, rEnd) ? rEnd : end;
+        const dStart = this.adapter.isBefore(start, firstColDate)
+          ? firstColDate
+          : start;
+        const dEnd = this.adapter.isAfter(end, lastColDate) ? lastColDate : end;
 
-        const left = this.adapter.diff(dStart, rStart, "day") * 14.2857;
-        const width = (this.adapter.diff(dEnd, dStart, "day") + 1) * 14.2857;
+        const startIdx = this.adapter.diff(dStart, firstColDate, "day");
+        const span = this.adapter.diff(dEnd, dStart, "day") + 1;
+
+        const colWidth = 100 / columnCount;
+        const left = startIdx * colWidth;
+        const width = span * colWidth;
 
         const ghost = createElement("div", "tg-ghost-event");
         setStyles(ghost, {
-          left: `${left}%`,
-          width: `${width}%`,
-          top: "30px",
-          height: "26px",
+          left: `calc(${left}% + 2px)`,
+          width: `calc(${width}% - 4px)`,
+          top: "4px",
+          height: "22px",
         });
 
-        row.appendChild(ghost);
+        allDayContainer.appendChild(ghost);
       }
     }
   }

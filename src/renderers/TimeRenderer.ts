@@ -13,6 +13,7 @@ import type {
   DayRenderConfig,
   TimeFilterResult,
   TimeFormatter,
+  AllDayLayoutItem,
 } from "../types";
 import type { TimeEngine } from "../engines/TimeEngine";
 import type { DragController } from "../core/DragController";
@@ -53,14 +54,34 @@ export class TimeRenderer<T> {
     clearElement(container);
 
     // Generate columns with dayFilter
-    const columns = this.engine.generateColumns(currentDate, viewType, dayFilter);
+    const columns = this.engine.generateColumns(
+      currentDate,
+      viewType,
+      dayFilter,
+    );
 
     // Generate time slots with timeFilter
     const timeSlots = this.engine.generateTimeSlots(timeFilter);
 
+    // Separate all-day events from timed events
+    const allDayEvents = events.filter((e) => this.engine.isAllDayEvent(e));
+    const timedEvents = events.filter((e) => !this.engine.isAllDayEvent(e));
+
     // Render header
     const header = this.renderHeader(columns, currentDate, dayFilter);
     container.appendChild(header);
+
+    // Render all-day events section (if any)
+    if (allDayEvents.length > 0) {
+      const allDaySection = this.renderAllDaySection(
+        columns,
+        allDayEvents,
+        dragController,
+        renderCallback,
+        onEventClick,
+      );
+      container.appendChild(allDaySection);
+    }
 
     // Render scrollable body
     const scrollWrap = createElement("div", "tg-time-grid-container");
@@ -70,11 +91,11 @@ export class TimeRenderer<T> {
     const axis = this.renderTimeAxis(timeSlots, timeFormatter);
     bodyInner.appendChild(axis);
 
-    // Render day columns
+    // Render day columns (only timed events)
     for (const colData of columns) {
       const col = this.renderDayColumn(
         colData,
-        events,
+        timedEvents,
         dragController,
         renderCallback,
         onEventClick,
@@ -93,7 +114,9 @@ export class TimeRenderer<T> {
       } else {
         // Default scroll to first visible time slot >= 8:00 AM
         const defaultHour = 8;
-        const targetSlotIndex = timeSlots.findIndex((slot) => slot.hour >= defaultHour);
+        const targetSlotIndex = timeSlots.findIndex(
+          (slot) => slot.hour >= defaultHour,
+        );
         if (targetSlotIndex >= 0) {
           scrollWrap.scrollTop = targetSlotIndex * this.theme.cellHeight;
         }
@@ -172,8 +195,140 @@ export class TimeRenderer<T> {
     return header;
   }
 
+  /**
+   * Render the all-day events section below the header
+   * Uses layout calculation for multi-day spanning events
+   */
+  private renderAllDaySection(
+    columns: Array<{ date: T; dateStr: string }>,
+    allDayEvents: CalendarEvent[],
+    dragController: DragController<T>,
+    renderCallback: () => void,
+    onEventClick?: (event: CalendarEvent) => void,
+  ): HTMLElement {
+    const section = createElement("div", "tg-allday-section");
+
+    // Left spacer (matches time axis width)
+    const spacer = createElement("div", "tg-allday-spacer");
+    section.appendChild(spacer);
+
+    // Container for all-day events (positioned relatively)
+    const eventsContainer = createElement("div", "tg-allday-events-container");
+    eventsContainer.style.setProperty(
+      "--tg-allday-columns",
+      String(columns.length),
+    );
+
+    // Calculate layout for all-day events
+    const layout = this.engine.calculateAllDayLayout(allDayEvents, columns);
+
+    // Calculate section height based on max slot
+    const maxSlot = layout.reduce((max, item) => Math.max(max, item.slot), -1);
+    const rowHeight = 26; // Height of each all-day event row
+    const padding = 8; // Top and bottom padding
+    const sectionHeight =
+      maxSlot >= 0 ? padding + (maxSlot + 1) * rowHeight : 0;
+    eventsContainer.style.height = `${Math.max(sectionHeight, 28)}px`;
+
+    // Render each all-day event bar with spanning
+    for (const item of layout) {
+      const eventEl = this.renderAllDayEventBar(
+        item,
+        columns.length,
+        dragController,
+        renderCallback,
+        onEventClick,
+      );
+      eventsContainer.appendChild(eventEl);
+    }
+
+    section.appendChild(eventsContainer);
+    return section;
+  }
+
+  /**
+   * Render a single all-day event bar with spanning support
+   */
+  private renderAllDayEventBar(
+    item: AllDayLayoutItem,
+    columnCount: number,
+    dragController: DragController<T>,
+    renderCallback: () => void,
+    onEventClick?: (event: CalendarEvent) => void,
+  ): HTMLElement {
+    const el = createElement("div", "tg-event-base tg-allday-event");
+    el.dataset["eid"] = item.event.id;
+
+    // Apply custom styling if hook is provided
+    let bgColor = item.event.color || "#3b82f6";
+    let customOpacity: number | undefined;
+
+    if (this.onStyleEvent) {
+      const style = this.onStyleEvent(item.event);
+      if (style.className) {
+        el.classList.add(style.className);
+      }
+      if (style.color) {
+        bgColor = style.color;
+      }
+      if (style.opacity !== undefined) {
+        customOpacity = style.opacity;
+      }
+    }
+
+    // Calculate position and size based on layout
+    const colWidth = 100 / columnCount;
+    const xOffset = item.startIdx * colWidth;
+    const yOffset = 4 + item.slot * 26; // 4px top padding, 26px row height
+
+    el.style.left = `calc(${xOffset}% + 2px)`;
+    el.style.top = `${yOffset}px`;
+    el.style.width = `calc(${item.span * colWidth}% - 4px)`;
+    el.style.backgroundColor = bgColor;
+
+    if (customOpacity !== undefined) {
+      el.style.opacity = customOpacity.toString();
+    }
+
+    // Title only (no time text for all-day events)
+    el.textContent = item.event.title;
+
+    // Add resize handles for spanning events
+    if (item.isStart) {
+      const leftHandle = createElement(
+        "div",
+        "tg-resize-handle tg-resize-h tg-left",
+      );
+      el.appendChild(leftHandle);
+    }
+
+    if (item.isEnd) {
+      const rightHandle = createElement(
+        "div",
+        "tg-resize-handle tg-resize-h tg-right",
+      );
+      el.appendChild(rightHandle);
+    }
+
+    // Event click handler
+    if (onEventClick) {
+      el.addEventListener("click", (e) => {
+        e.stopPropagation();
+        onEventClick(item.event);
+      });
+    }
+
+    // Initialize drag for all-day events (use month drag for horizontal movement)
+    dragController.initMonthDrag(el, item.event, renderCallback);
+
+    return el;
+  }
+
   private renderTimeAxis(
-    timeSlots: Array<{ hour: number; config?: import("../types").TimeSlotConfig }>,
+    timeSlots: Array<{
+      hour: number;
+      config?: import("../types").TimeSlotConfig;
+    }>,
     timeFormatter?: TimeFormatter,
   ): HTMLElement {
     const axis = createElement("div", "tg-time-axis");
@@ -211,7 +366,10 @@ export class TimeRenderer<T> {
     dragController: DragController<T>,
     renderCallback: () => void,
     onEventClick?: (event: CalendarEvent) => void,
-    timeSlots?: Array<{ hour: number; config?: import("../types").TimeSlotConfig }>,
+    timeSlots?: Array<{
+      hour: number;
+      config?: import("../types").TimeSlotConfig;
+    }>,
   ): HTMLElement {
     const col = createElement("div", "tg-day-column");
     col.dataset["date"] = colData.dateStr;
@@ -276,16 +434,20 @@ export class TimeRenderer<T> {
       el.style.opacity = customOpacity.toString();
     }
 
-    // Format times
-    const startDate = this.adapter.parse(item.event.start);
-    const endDate = this.adapter.parse(item.event.end);
-    const startTime = this.adapter.format(startDate, this.dateFormats.time);
-    const endTime = this.adapter.format(endDate, this.dateFormats.time);
+    // Check if this is an all-day event
+    const isAllDay = this.engine.isAllDayEvent(item.event);
 
-    // Create content
-    const timeText = createElement("div", "tg-time-text");
-    timeText.textContent = `${startTime} - ${endTime}`;
-    el.appendChild(timeText);
+    // Create content - hide time text for all-day events
+    if (!isAllDay) {
+      const startDate = this.adapter.parse(item.event.start);
+      const endDate = this.adapter.parse(item.event.end);
+      const startTime = this.adapter.format(startDate, this.dateFormats.time);
+      const endTime = this.adapter.format(endDate, this.dateFormats.time);
+
+      const timeText = createElement("div", "tg-time-text");
+      timeText.textContent = `${startTime} - ${endTime}`;
+      el.appendChild(timeText);
+    }
 
     const titleText = createElement("div", "tg-event-title");
     titleText.textContent = item.event.title;
