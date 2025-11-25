@@ -21,12 +21,12 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    max-height: 90vh;
+    max-height: 100%;
 }
 
 /* View container */
 .tg-view-container {
-    min-height: 600px;
+    min-height: 0;
     background: white;
     flex: 1;
     overflow: hidden;
@@ -55,7 +55,7 @@
 .tg-time-grid-container {
     display: flex;
     flex-direction: column;
-    height: 600px;
+    height: 100%;
     overflow-y: auto;
     position: relative;
     scroll-behavior: auto;
