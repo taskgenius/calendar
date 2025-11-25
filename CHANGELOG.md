@@ -7,6 +7,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.0] - 2025-11-25
+
+### ✨ Features
+
+- **Extensible view system**: Complete architecture refactoring to support custom view plugins
+  - Introduce `BaseView` abstract class for custom view implementations
+  - Add `ViewRegistry` for dynamic view registration and management
+  - Built-in views (MonthView, WeekView, DayView) refactored to use new system
+  - Support custom view registration via `Calendar.registerView()` API
+  - Enable view extension through standard class inheritance
+  - Dynamic view switcher in header based on registered views
+
+### 🏗️ Architecture
+
+- **View lifecycle management**: Add comprehensive lifecycle hooks
+  - `onMount()`: Called when view is activated
+  - `onUnmount()`: Called when view is deactivated
+  - `getHeaderTitle()`: Custom header title generation
+  - `getNavigationUnit()`: Custom navigation behavior
+- **View context system**: Provide centralized context for view instances
+  - Access to current date, adapter, event manager, and config
+  - `requestRender()` callback for triggering re-renders
+  - `goToDate()` for programmatic navigation
+- **Backward compatibility**: Public API unchanged, internal refactoring only
+
+### 📦 Exports
+
+- Export view system classes: `BaseView`, `ViewRegistry`, `MonthView`, `TimeView`, `WeekView`, `DayView`
+- Export view system types: `ViewContext`, `ViewMeta`, `ViewRenderOptions`, `ViewClass`, `ViewRegistrationOptions`
+- Export `ExtendedCalendarConfig` type for TypeScript users
+
+### 📚 Documentation
+
+- Add comprehensive JSDoc comments for view system APIs
+- Document custom view creation patterns
+- Add examples for view extension via inheritance
+
+### 🧪 Testing
+
+- Add `ViewRegistry.test.ts` with 8 comprehensive tests
+- Add `ViewUsage.test.ts` integration tests
+- All tests passing (100% success rate)
+
 ## [0.10.0] - 2025-11-25
 
 ### ✨ Features
@@ -456,7 +499,8 @@ new Calendar('#app', {
 - Lightweight (<12KB gzipped)
 - SOLID architecture
 
-[Unreleased]: https://github.com/taskgenius/calendar/compare/v0.10.0...HEAD
+[Unreleased]: https://github.com/taskgenius/calendar/compare/v0.11.0...HEAD
+[0.11.0]: https://github.com/taskgenius/calendar/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/taskgenius/calendar/compare/v0.9.3...v0.10.0
 [0.9.3]: https://github.com/taskgenius/calendar/compare/v0.9.2...v0.9.3
 [0.9.2]: https://github.com/taskgenius/calendar/compare/v0.9.1...v0.9.2
