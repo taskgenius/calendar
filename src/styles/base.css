@@ -19,7 +19,7 @@
 
     /* Main container layout */
     width: 100%;
-    max-width: 1200px;
+    height: 100%;
     background: white;
     border-radius: 12px;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
@@ -27,7 +27,6 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    max-height: 100%;
 }
 
 /* Disable text selection during range selection */
@@ -45,6 +44,8 @@
     flex: 1;
     overflow: hidden;
     position: relative;
+    display: flex;
+    flex-direction: column;
 }
 
 /* Header styles */

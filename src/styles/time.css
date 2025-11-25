@@ -2,14 +2,13 @@
  * Time view (week/day) styles
  */
 
-/* Time grid container */
+/* Time grid container - scrollable wrapper */
 .tg-time-grid-container {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
+    flex: 1 1 0;
+    min-height: 0;
     overflow-y: auto;
+    overflow-x: hidden;
     position: relative;
-    scroll-behavior: auto;
 }
 
 /* Time header */

@@ -2,9 +2,13 @@
  * Month view styles
  */
 
-/* Month body container */
+/* Month body container - grid layout to distribute row heights evenly */
 .tg-month-body {
     overflow-y: auto;
+    flex: 1;
+    min-height: 0; /* Required for flex child to respect overflow */
+    display: grid;
+    grid-auto-rows: 1fr; /* All rows get equal height */
 }
 
 /* Month header */
@@ -22,11 +26,11 @@
     color: #9ca3af;
 }
 
-/* Month row - uses CSS custom properties for dynamic grid */
+/* Month row - height controlled by parent grid (grid-auto-rows: 1fr) */
 .tg-month-row {
     display: grid;
     position: relative;
-    min-height: 100px;
+    min-height: var(--tg-row-min-height, 80px); /* Minimum height per row */
     border-bottom: 1px solid #e5e7eb;
 }
 
@@ -103,4 +107,83 @@
     border: 2px solid rgba(var(--tg-primary-rgb), 0.4);
     pointer-events: none;
     box-sizing: border-box;
+}
+
+/* "+N more" indicator */
+.tg-more-indicator {
+    position: absolute;
+    font-size: 11px;
+    color: var(--tg-primary-color, #3b82f6);
+    padding: 2px 6px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background-color 0.15s;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    z-index: 5;
+}
+
+.tg-more-indicator:hover {
+    background-color: rgba(var(--tg-primary-rgb, 59, 130, 246), 0.1);
+}
+
+/* More events popover */
+.tg-more-popover {
+    position: fixed;
+    z-index: 1000;
+    background: white;
+    border-radius: 8px;
+    box-shadow:
+        0 4px 16px rgba(0, 0, 0, 0.15),
+        0 2px 8px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e5e7eb;
+    min-width: 200px;
+    max-width: 280px;
+    max-height: 300px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.tg-more-popover-header {
+    padding: 10px 12px;
+    font-weight: 600;
+    font-size: 13px;
+    color: #374151;
+    border-bottom: 1px solid #e5e7eb;
+    background: #f9fafb;
+}
+
+.tg-more-popover-list {
+    overflow-y: auto;
+    padding: 4px 0;
+    flex: 1;
+}
+
+.tg-more-popover-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    font-size: 12px;
+    color: #374151;
+    transition: background-color 0.15s;
+}
+
+.tg-more-popover-item:hover {
+    background-color: #f3f4f6;
+}
+
+.tg-more-popover-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.tg-more-popover-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }

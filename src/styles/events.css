@@ -18,12 +18,20 @@
     white-space: nowrap;
     text-overflow: ellipsis;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-    transition: opacity 0.2s;
+    transition:
+        opacity 0.2s,
+        box-shadow 0.1s,
+        filter 0.1s;
     /* GPU acceleration for smooth transforms */
     will-change: transform;
-    /* Use transform for positioning - values set via CSS custom properties */
+    /* Base position for transform - JS sets translate() */
     top: 0;
     left: 0;
+}
+
+.tg-event-base:hover {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    filter: brightness(1.05);
 }
 
 .tg-event-base:active {
@@ -137,4 +145,52 @@
     visibility: hidden;
     opacity: 0.9;
     transform-origin: top left;
+}
+
+/* =============================================================================
+   All-day Events Section (Week/Day views)
+   ============================================================================= */
+
+.tg-allday-section {
+    display: flex;
+    flex-direction: row;
+    border-bottom: 1px solid var(--tg-border-color, #e5e7eb);
+    background-color: var(--tg-bg-color, #fff);
+    min-height: 28px;
+}
+
+.tg-allday-spacer {
+    flex-shrink: 0;
+    width: 60px; /* Match time axis width */
+    border-right: 1px solid var(--tg-border-color, #e5e7eb);
+}
+
+.tg-allday-events-container {
+    flex: 1;
+    position: relative;
+    min-height: 28px;
+}
+
+/* All-day event bar (spanning style like month view) */
+.tg-allday-event {
+    position: absolute;
+    height: 22px;
+    line-height: 22px;
+    border-radius: 3px;
+    padding: 0 6px;
+    font-size: 12px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    cursor: grab;
+    box-sizing: border-box;
+}
+
+.tg-allday-event:hover {
+    filter: brightness(1.05);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+.tg-allday-event:active {
+    cursor: grabbing;
 }
