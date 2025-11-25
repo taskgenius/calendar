@@ -129,6 +129,8 @@ export class Calendar<T = Dayjs> {
       this.config.dateFormats,
       this.config.onRenderDateCell,
       this.config.onStyleEvent,
+      this.config.view.maxEventsPerRow,
+      this.config.onRenderMoreEventsPopover,
     );
     this.timeRenderer = new TimeRenderer<T>(
       this.timeEngine,
@@ -532,6 +534,11 @@ export class Calendar<T = Dayjs> {
       showWeekends: config.view?.showWeekends ?? true,
     };
 
+    // Add optional properties only if they exist (for exactOptionalPropertyTypes)
+    if (config.view?.maxEventsPerRow !== undefined) {
+      resolvedView.maxEventsPerRow = config.view.maxEventsPerRow;
+    }
+
     // Add filter functions only if they exist (for exactOptionalPropertyTypes)
     if (dayFilter) {
       resolvedView.dayFilter = dayFilter;
@@ -594,6 +601,8 @@ export class Calendar<T = Dayjs> {
     if (config.onRenderDateCell)
       resolved.onRenderDateCell = config.onRenderDateCell;
     if (config.onStyleEvent) resolved.onStyleEvent = config.onStyleEvent;
+    if (config.onRenderMoreEventsPopover)
+      resolved.onRenderMoreEventsPopover = config.onRenderMoreEventsPopover;
 
     return resolved;
   }

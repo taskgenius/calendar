@@ -106,6 +106,13 @@ export interface ViewConfig {
   /** Show weekends (Saturday and Sunday) (default: true). Note: dayFilter takes precedence if provided. */
   showWeekends?: boolean;
   /**
+   * Maximum number of events to display per row in month view before collapsing (default: undefined = no limit)
+   * When set, events beyond this limit will be hidden and a "+N more" indicator will be shown
+   * @example
+   * maxEventsPerRow: 3 // Show up to 3 events, then "+N more" for the rest
+   */
+  maxEventsPerRow?: number;
+  /**
    * Day filter function (applies to all views)
    * Controls which days are rendered and how they appear
    * @param date - The date to filter (type depends on date adapter)
@@ -360,6 +367,25 @@ export interface MonthLayoutItem {
 }
 
 /**
+ * Layout information for an all-day event in time view (week/day)
+ * Similar to MonthLayoutItem but used in the all-day section of time views
+ */
+export interface AllDayLayoutItem {
+  /** Original event data */
+  event: CalendarEvent;
+  /** Start column index (0-based, maps to visible columns) */
+  startIdx: number;
+  /** Number of columns the event spans */
+  span: number;
+  /** Vertical slot position (row index for stacking) */
+  slot: number;
+  /** Whether this segment is the start of the event */
+  isStart: boolean;
+  /** Whether this segment is the end of the event */
+  isEnd: boolean;
+}
+
+/**
  * Layout information for a time view event
  */
 export interface TimeLayoutItem {
@@ -473,6 +499,21 @@ export interface CalendarConfig {
   onRenderDateCell?: (ctx: DateCellContext) => void;
   /** Hook to customize event styling */
   onStyleEvent?: (event: CalendarEvent) => EventStyle;
+  /**
+   * Custom renderer for the "more events" popover in month view
+   * Called when user clicks the "+N more" indicator
+   * If not provided, a default popover will be shown
+   * @param events - Array of hidden events for that date
+   * @param date - The date of the cell
+   * @param anchorEl - The "+N more" element that was clicked (for positioning)
+   * @param defaultRender - Call this function to render the default popover
+   */
+  onRenderMoreEventsPopover?: (
+    events: CalendarEvent[],
+    date: Date,
+    anchorEl: HTMLElement,
+    defaultRender: () => void,
+  ) => void;
 }
 
 /**
@@ -480,11 +521,15 @@ export interface CalendarConfig {
  */
 export interface ResolvedCalendarConfig {
   view: Required<
-    Omit<ViewConfig, "dayFilter" | "timeFilter" | "timeFormatter">
+    Omit<
+      ViewConfig,
+      "dayFilter" | "timeFilter" | "timeFormatter" | "maxEventsPerRow"
+    >
   > & {
     dayFilter?: (date: unknown, context: DayFilterContext) => DayFilterResult;
     timeFilter?: (hour: number) => TimeFilterResult;
     timeFormatter?: TimeFormatter;
+    maxEventsPerRow?: number;
   };
   draggable: Required<DraggableConfig>;
   theme: Required<ThemeConfig> & {
@@ -513,6 +558,12 @@ export interface ResolvedCalendarConfig {
   onTimeRangeSelect?: (startDateTime: Date, endDateTime: Date) => void;
   onRenderDateCell?: (ctx: DateCellContext) => void;
   onStyleEvent?: (event: CalendarEvent) => EventStyle;
+  onRenderMoreEventsPopover?: (
+    events: CalendarEvent[],
+    date: Date,
+    anchorEl: HTMLElement,
+    defaultRender: () => void,
+  ) => void;
 }
 
 // =============================================================================
