@@ -7,6 +7,77 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.0] - 2025-11-25
+
+### ✨ Features
+
+- **All-day events section**: Week and day views now include a dedicated all-day events section at the top
+  - Automatic detection of all-day events (00:00-00:00 or 00:00-23:59 time ranges)
+  - Multi-day spanning event support with proper visual continuity
+  - Intelligent layout stacking to prevent overlaps
+  - Full drag & drop support for repositioning all-day events
+- **Month view event overflow handling**: Add `maxEventsPerRow` configuration to limit visible events per date cell
+  - Automatic "+N more" indicator for hidden events
+  - Interactive popover showing complete list of hidden events
+  - Custom popover rendering with `onRenderMoreEventsPopover` hook
+  - Dynamic row height calculation based on visible events
+  - Smart viewport boundary detection for popover positioning
+- **Enhanced demo page**: Complete redesign with Swiss Brutalist aesthetic
+  - Interactive sidebar with real-time configuration controls
+  - Active days selector for custom day filtering
+  - Drag & drop configuration panel
+  - Event log panel with activity tracking
+  - Config export with copy-to-clipboard functionality
+
+### 🎨 Styles
+
+- **Improved layout system**: Calendar now uses flex layout to fill available container space
+- **Better month view grid**: CSS grid with auto-rows for even row distribution
+- **Enhanced event styling**: Improved hover effects with box-shadow and brightness adjustments
+- **All-day section styling**: Dedicated styles for the new all-day events area
+- **Popover styling**: Visual design for "+N more" indicators and event list popovers
+
+### 🏗️ Refactoring
+
+- **Modular CSS architecture**: Split monolithic styles.css into focused modules
+  - `base.css`: Core layout and container styles
+  - `month.css`: Month view specific styles
+  - `time.css`: Week/day view specific styles
+  - `events.css`: Event component styling
+  - `styles.css`: Unified entry point importing all modules
+- **Event positioning refinements**: Optimized positioning logic for all-day and regular events
+
+### 📚 Documentation
+
+- Updated type definitions with comprehensive JSDoc comments
+- Added `AllDayLayoutItem` type for all-day event layout calculations
+- Enhanced `CalendarConfig` with new options documentation
+
+## [0.9.3] - 2025-11-25
+
+### ⚡ Performance
+
+- **GPU-accelerated event positioning**: Replace left/top CSS positioning with `transform: translate()` for hardware acceleration
+  - Significantly improved rendering performance for calendars with many events
+  - Smoother animations and interactions
+  - Reduced browser reflow/repaint operations
+
+### 🏗️ Refactoring
+
+- **CSS modularization**: Split monolithic styles.css into focused modules (base, month, time, events)
+- **Improved maintainability**: Better separation of concerns in styling architecture
+- **Build optimization**: Vite config updated to properly merge CSS modules during build
+
+### 🔧 Configuration
+
+- Add `.release-it.json` for automated release workflow
+
+## [0.9.2] - 2025-11-25
+
+### 📦 Package
+
+- Version bump to 0.9.2 for npm publishing
+
 ## [0.9.1] - 2025-11-25
 
 ### 🐛 Bug Fixes
@@ -385,7 +456,10 @@ new Calendar('#app', {
 - Lightweight (<12KB gzipped)
 - SOLID architecture
 
-[Unreleased]: https://github.com/taskgenius/calendar/compare/v0.9.1...HEAD
+[Unreleased]: https://github.com/taskgenius/calendar/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/taskgenius/calendar/compare/v0.9.3...v0.10.0
+[0.9.3]: https://github.com/taskgenius/calendar/compare/v0.9.2...v0.9.3
+[0.9.2]: https://github.com/taskgenius/calendar/compare/v0.9.1...v0.9.2
 [0.9.1]: https://github.com/taskgenius/calendar/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/taskgenius/calendar/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/taskgenius/calendar/compare/v0.7.0...v0.8.0

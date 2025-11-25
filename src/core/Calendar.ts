@@ -1,5 +1,10 @@
 /**
  * Main Calendar class - the primary public API
+ *
+ * Supports extensible view system with:
+ * - Built-in views (month, week, day)
+ * - Custom view registration
+ * - View class extension via standard inheritance
  */
 import type { Dayjs } from "dayjs";
 import type {
@@ -10,23 +15,48 @@ import type {
   DateAdapter,
 } from "../types";
 import { DayJsAdapter } from "../adapters/DayJsAdapter";
-import { MonthEngine } from "../engines/MonthEngine";
-import { TimeEngine } from "../engines/TimeEngine";
-import { MonthRenderer } from "../renderers/MonthRenderer";
-import { TimeRenderer } from "../renderers/TimeRenderer";
 import { DragController } from "./DragController";
 import { EventManager } from "./EventManager";
 import { InteractionController } from "./InteractionController";
 import { applyThemeVariables } from "../styles";
 import { createElement, clearElement } from "../utils/dom";
 import { DEFAULT_DATE_FORMATS, INTERNAL_DATA_FORMAT } from "../constants";
+import {
+  ViewRegistry,
+  defaultViewRegistry,
+  BaseView,
+  MonthView,
+  WeekView,
+  DayView,
+  type ViewContext,
+  type ViewMeta,
+  type ViewClass,
+  type ViewRegistrationOptions,
+} from "../views";
+
+/**
+ * Extended calendar configuration with view registry support
+ */
+export interface ExtendedCalendarConfig extends CalendarConfig {
+  /**
+   * Custom view registry instance
+   * If not provided, uses the default global registry
+   */
+  viewRegistry?: ViewRegistry;
+  /**
+   * Whether to register built-in views automatically
+   * @default true
+   */
+  registerBuiltInViews?: boolean;
+}
 
 /**
  * TaskGenius Calendar Component
  *
- * A lightweight, configurable calendar with drag-and-drop support.
+ * A lightweight, configurable calendar with drag-and-drop support
+ * and extensible view system.
  *
- * @example
+ * @example Basic usage
  * ```typescript
  * const calendar = new Calendar('#app', {
  *   view: { type: 'week' },
@@ -35,24 +65,52 @@ import { DEFAULT_DATE_FORMATS, INTERNAL_DATA_FORMAT } from "../constants";
  *   ]
  * });
  * ```
+ *
+ * @example Custom view registration
+ * ```typescript
+ * // Define a custom view with required static meta
+ * class CustomView extends BaseView {
+ *   static readonly meta: ViewMeta = { type: 'custom', label: 'Custom', shortLabel: 'C', order: 40 };
+ *
+ *   render(container, events) {
+ *     // Custom rendering logic
+ *   }
+ * }
+ *
+ * // Register and use
+ * const calendar = new Calendar('#app', {});
+ * calendar.registerView(CustomView);
+ * calendar.setView('custom');
+ * ```
+ *
+ * @example Extending existing views via class inheritance
+ * ```typescript
+ * class ExtendedMonthView extends MonthView {
+ *   static readonly meta: ViewMeta = { type: 'extended-month', label: 'Extended Month', shortLabel: 'EM' };
+ *
+ *   render(container, events, options) {
+ *     super.render(container, events, options);
+ *     // Add custom elements after base rendering
+ *   }
+ * }
+ *
+ * calendar.registerView(ExtendedMonthView);
+ * ```
  */
 export class Calendar<T = Dayjs> {
   private container: HTMLElement;
   private config: ResolvedCalendarConfig;
   private adapter: DateAdapter<T>;
   private currentDate: T;
-  private currentView: ViewType;
+  private currentViewType: string;
   private eventManager: EventManager;
   private dragController: DragController<T>;
   private interactionController: InteractionController<T>;
 
-  // Engines
-  private monthEngine: MonthEngine<T>;
-  private timeEngine: TimeEngine<T>;
-
-  // Renderers
-  private monthRenderer: MonthRenderer<T>;
-  private timeRenderer: TimeRenderer<T>;
+  // View system
+  private viewRegistry: ViewRegistry;
+  private activeView: BaseView<T> | null = null;
+  private viewContext!: ViewContext<T>;
 
   /**
    * Create a new Calendar instance
@@ -62,7 +120,7 @@ export class Calendar<T = Dayjs> {
    */
   constructor(
     containerSelector: string | HTMLElement,
-    config: CalendarConfig = {},
+    config: ExtendedCalendarConfig = {},
   ) {
     // 1. Initialize container
     if (typeof containerSelector === "string") {
@@ -81,7 +139,7 @@ export class Calendar<T = Dayjs> {
     // 3. Initialize date adapter
     this.adapter = (config.dateAdapter || new DayJsAdapter()) as DateAdapter<T>;
     this.currentDate = this.adapter.create();
-    this.currentView = this.config.view.type;
+    this.currentViewType = this.config.view.type;
 
     // 4. Initialize event manager
     this.eventManager = new EventManager(config.events);
@@ -101,70 +159,138 @@ export class Calendar<T = Dayjs> {
       this.adapter,
       this.config,
       this.dragController,
-      () => this.currentView,
+      () => this.currentViewType as ViewType,
       this.eventManager,
     );
 
-    // 6. Initialize engines
-    this.monthEngine = new MonthEngine<T>(
-      this.adapter,
-      this.config.view.firstDayOfWeek,
-      this.config.view.showWeekends,
-      this.config.dateFormats,
-    );
-    this.timeEngine = new TimeEngine<T>(
-      this.adapter,
-      this.config.theme.cellHeight,
-      this.config.view.showWeekends,
-      this.config.view.firstDayOfWeek,
-      this.config.dateFormats,
-    );
+    // 6. Initialize view registry
+    this.viewRegistry = config.viewRegistry || defaultViewRegistry;
 
-    // 7. Initialize renderers
-    this.monthRenderer = new MonthRenderer<T>(
-      this.monthEngine,
-      this.adapter,
-      this.config.theme,
-      this.config.showEventCounts,
-      this.config.dateFormats,
-      this.config.onRenderDateCell,
-      this.config.onStyleEvent,
-      this.config.view.maxEventsPerRow,
-      this.config.onRenderMoreEventsPopover,
-    );
-    this.timeRenderer = new TimeRenderer<T>(
-      this.timeEngine,
-      this.adapter,
-      this.config.theme,
-      this.config.dateFormats,
-      this.config.onStyleEvent,
-    );
+    // 7. Register built-in views if needed
+    if (config.registerBuiltInViews !== false) {
+      this.registerBuiltInViews();
+    }
 
-    // 8. Initial render
+    // 8. Create view context
+    this.viewContext = this.createViewContext();
+
+    // 9. Initial render
     this.render();
   }
 
   // ==========================================================================
-  // Public API
+  // View Management Public API
   // ==========================================================================
+
+  /**
+   * Register a custom view
+   *
+   * @param ViewClassArg - View class extending BaseView with static meta
+   * @param options - Registration options
+   *
+   * @example
+   * ```typescript
+   * class CustomView extends BaseView {
+   *   static readonly meta: ViewMeta = { type: 'custom', label: 'Custom', shortLabel: 'C' };
+   *   render(container, events) { ... }
+   * }
+   *
+   * calendar.registerView(CustomView);
+   * ```
+   */
+  registerView(
+    ViewClassArg: ViewClass<T>,
+    options?: ViewRegistrationOptions,
+  ): void {
+    this.viewRegistry.register(ViewClassArg, options);
+    // Re-render to update view switcher if needed
+    this.render();
+  }
+
+  /**
+   * Unregister a view by type
+   *
+   * @param type - View type to unregister
+   * @returns true if view was removed
+   */
+  unregisterView(type: string): boolean {
+    const result = this.viewRegistry.unregister(type);
+    if (result) {
+      // If current view was unregistered, switch to first available
+      if (this.currentViewType === type) {
+        const types = this.viewRegistry.getTypes();
+        if (types.length > 0) {
+          this.setView(types[0]!);
+        }
+      }
+      this.render();
+    }
+    return result;
+  }
+
+  /**
+   * Get all registered view metadata
+   *
+   * @returns Array of view metadata sorted by order
+   */
+  getRegisteredViews(): ViewMeta[] {
+    return this.viewRegistry.getAll();
+  }
+
+  /**
+   * Check if a view type is registered
+   *
+   * @param type - View type to check
+   */
+  hasView(type: string): boolean {
+    return this.viewRegistry.has(type);
+  }
+
+  /**
+   * Get the view registry for advanced manipulation
+   */
+  getViewRegistry(): ViewRegistry {
+    return this.viewRegistry;
+  }
 
   /**
    * Set the calendar view type
    *
-   * @param type - View type ('month', 'week', or 'day')
+   * @param type - View type (built-in or custom registered type)
    */
-  setView(type: ViewType): void {
-    this.currentView = type;
-    this.config.onViewChange?.(type);
+  setView(type: string): void {
+    if (!this.viewRegistry.has(type)) {
+      console.warn(`View type '${type}' is not registered. Ignoring.`);
+      return;
+    }
+
+    // Unmount previous view
+    if (this.activeView) {
+      this.activeView.onUnmount();
+    }
+
+    this.currentViewType = type;
+    this.config.onViewChange?.(type as ViewType);
     this.render();
   }
 
   /**
    * Get the current view type
    */
-  getView(): ViewType {
-    return this.currentView;
+  getView(): string {
+    return this.currentViewType;
   }
+
+  /**
+   * Get the active view instance
+   */
+  getActiveView(): BaseView<T> | null {
+    return this.activeView;
+  }
+
+  // ==========================================================================
+  // Event Management Public API
+  // ==========================================================================
 
   /**
    * Add a new event
@@ -214,22 +340,28 @@ export class Calendar<T = Dayjs> {
     this.render();
   }
 
+  // ==========================================================================
+  // Navigation Public API
+  // ==========================================================================
+
   /**
-   * Navigate to next period (month/week/day)
+   * Navigate to next period
    */
   next(): void {
     const unit = this.getNavigationUnit();
     this.currentDate = this.adapter.add(this.currentDate, 1, unit);
+    this.viewContext.currentDate = this.currentDate;
     this.config.onDateChange?.(this.toDate(this.currentDate));
     this.render();
   }
 
   /**
-   * Navigate to previous period (month/week/day)
+   * Navigate to previous period
    */
   prev(): void {
     const unit = this.getNavigationUnit();
     this.currentDate = this.adapter.add(this.currentDate, -1, unit);
+    this.viewContext.currentDate = this.currentDate;
     this.config.onDateChange?.(this.toDate(this.currentDate));
     this.render();
   }
@@ -239,6 +371,7 @@ export class Calendar<T = Dayjs> {
    */
   today(): void {
     this.currentDate = this.adapter.create();
+    this.viewContext.currentDate = this.currentDate;
     this.config.onDateChange?.(this.toDate(this.currentDate));
     this.render();
   }
@@ -250,6 +383,7 @@ export class Calendar<T = Dayjs> {
    */
   goToDate(date: string | Date): void {
     this.currentDate = this.adapter.create(date);
+    this.viewContext.currentDate = this.currentDate;
     this.config.onDateChange?.(this.toDate(this.currentDate));
     this.render();
   }
@@ -258,18 +392,22 @@ export class Calendar<T = Dayjs> {
    * Get the current date in ISO format
    *
    * @returns Date string in YYYY-MM-DD format (ISO 8601)
-   *
-   * Note: This method intentionally returns ISO format regardless of
-   * dateFormats configuration to ensure API stability and reliability
    */
   getCurrentDate(): string {
     return this.adapter.format(this.currentDate, INTERNAL_DATA_FORMAT.date);
   }
 
+  // ==========================================================================
+  // Utility Public API
+  // ==========================================================================
+
   /**
    * Destroy the calendar instance and cleanup
    */
   destroy(): void {
+    if (this.activeView) {
+      this.activeView.onUnmount();
+    }
     this.dragController.destroy();
     this.interactionController.destroy();
     clearElement(this.container);
@@ -302,6 +440,41 @@ export class Calendar<T = Dayjs> {
   // Private Methods
   // ==========================================================================
 
+  private registerBuiltInViews(): void {
+    // Register built-in views if not already registered
+    if (!this.viewRegistry.has("month")) {
+      this.viewRegistry.register(MonthView as ViewClass);
+    }
+    if (!this.viewRegistry.has("week")) {
+      this.viewRegistry.register(WeekView as ViewClass);
+    }
+    if (!this.viewRegistry.has("day")) {
+      this.viewRegistry.register(DayView as ViewClass);
+    }
+  }
+
+  private createViewContext(): ViewContext<T> {
+    return {
+      currentDate: this.currentDate,
+      adapter: this.adapter,
+      eventManager: this.eventManager,
+      dragController: this.dragController,
+      config: this.config,
+      requestRender: () => this.render(),
+      goToDate: (date: T | string | Date) => {
+        // Handle all date input types via the adapter
+        if (typeof date === "string" || date instanceof Date) {
+          this.goToDate(date);
+        } else {
+          // For adapter-native type T, convert to Date first
+          const nativeDate = this.toDate(date);
+          this.goToDate(nativeDate);
+        }
+      },
+      getCurrentView: () => this.currentViewType as ViewType,
+    };
+  }
+
   private render(): void {
     // Save scroll position for time views
     let preservedScrollTop: number | null = null;
@@ -315,44 +488,29 @@ export class Calendar<T = Dayjs> {
     clearElement(this.container);
 
     // Create main container
-    // Layout styles applied via CSS class .tg-calendar
     const mainContainer = createElement("div", "tg-calendar");
     this.applyTheme(mainContainer);
 
-    // Render header
+    // Get or create view instance BEFORE rendering header
+    // This ensures activeView is set correctly for getHeaderTitle()
+    const view = this.getOrCreateView();
+    if (view) {
+      // Update context
+      this.viewContext.currentDate = this.currentDate;
+    }
+
+    // Render header with dynamic view switcher (after view is created)
     const header = this.renderHeader();
     mainContainer.appendChild(header);
 
     // Render view body
-    // Layout styles applied via CSS class .tg-view-container
     const viewBody = createElement("div", "tg-view-container");
 
-    const renderCallback = () => this.render();
-
-    if (this.currentView === "month") {
-      this.monthRenderer.render(
-        viewBody,
-        this.currentDate,
-        this.eventManager.getEvents(),
-        this.dragController,
-        renderCallback,
-        this.config.onEventClick,
-        this.config.view.dayFilter,
-      );
-    } else {
-      this.timeRenderer.render(
-        viewBody,
-        this.currentDate,
-        this.currentView,
-        this.eventManager.getEvents(),
-        this.dragController,
-        renderCallback,
-        this.config.onEventClick,
+    if (view) {
+      // Render view
+      view.render(viewBody, this.eventManager.getEvents(), {
         preservedScrollTop,
-        this.config.view.dayFilter,
-        this.config.view.timeFilter,
-        this.config.view.timeFormatter,
-      );
+      });
     }
 
     mainContainer.appendChild(viewBody);
@@ -360,6 +518,35 @@ export class Calendar<T = Dayjs> {
 
     // Initialize interaction listeners
     this.interactionController.init(mainContainer);
+  }
+
+  private getOrCreateView(): BaseView<T> | null {
+    // Check if we need to switch views
+    if (
+      this.activeView &&
+      this.activeView.getMeta().type === this.currentViewType
+    ) {
+      return this.activeView;
+    }
+
+    // Unmount previous view
+    if (this.activeView) {
+      this.activeView.onUnmount();
+    }
+
+    // Create new view
+    const view = this.viewRegistry.create<T>(this.currentViewType);
+    if (!view) {
+      console.error(`Failed to create view: ${this.currentViewType}`);
+      return null;
+    }
+
+    // Initialize and mount
+    view.init(this.viewContext);
+    view.onMount();
+    this.activeView = view;
+
+    return view;
   }
 
   private renderHeader(): HTMLElement {
@@ -370,23 +557,21 @@ export class Calendar<T = Dayjs> {
     title.textContent = this.getHeaderTitle();
     header.appendChild(title);
 
-    // View switcher
+    // View switcher - dynamically populated from registry
     const viewSwitch = createElement("div", "tg-view-switch");
-    const views: Array<{ type: ViewType; label: string }> = [
-      { type: "month", label: "M" },
-      { type: "week", label: "W" },
-      { type: "day", label: "D" },
-    ];
+    const registeredViews = this.viewRegistry.getAll();
 
-    for (const view of views) {
+    for (const viewMeta of registeredViews) {
       const btn = createElement("button", "tg-view-btn");
-      btn.textContent = view.label;
+      btn.textContent = viewMeta.shortLabel || viewMeta.label.charAt(0);
+      btn.title = viewMeta.label;
+      btn.dataset["viewType"] = viewMeta.type;
 
-      if (this.currentView === view.type) {
+      if (this.currentViewType === viewMeta.type) {
         btn.classList.add("tg-active");
       }
 
-      btn.onclick = () => this.setView(view.type);
+      btn.onclick = () => this.setView(viewMeta.type);
       viewSwitch.appendChild(btn);
     }
     header.appendChild(viewSwitch);
@@ -415,21 +600,35 @@ export class Calendar<T = Dayjs> {
   }
 
   private getHeaderTitle(): string {
+    // Use active view's header title if available
+    if (this.activeView) {
+      return this.activeView.getHeaderTitle();
+    }
+
+    // Fallback to default
     const format =
-      this.currentView === "day"
+      this.currentViewType === "day"
         ? this.config.headerFormat.day
         : this.config.headerFormat.month;
     return this.adapter.format(this.currentDate, format);
   }
 
-  private getNavigationUnit(): "month" | "week" | "day" {
-    switch (this.currentView) {
+  private getNavigationUnit(): "year" | "month" | "week" | "day" {
+    // Use active view's navigation unit if available
+    if (this.activeView) {
+      return this.activeView.getNavigationUnit();
+    }
+
+    // Fallback to default based on view type
+    switch (this.currentViewType) {
       case "month":
         return "month";
       case "week":
         return "week";
       case "day":
         return "day";
+      default:
+        return "month";
     }
   }
 
@@ -452,8 +651,6 @@ export class Calendar<T = Dayjs> {
     newEnd: Date,
   ): void {
     // IMPORTANT: Call the callback BEFORE updating internal state
-    // because the callback may need to compare old vs new values
-    // and the event object is passed by reference
     this.config.onEventDrop?.(event, newStart, newEnd);
 
     // Convert Date objects to ISO format strings for internal event storage
@@ -478,8 +675,6 @@ export class Calendar<T = Dayjs> {
     newEnd: Date,
   ): void {
     // IMPORTANT: Call the callback BEFORE updating internal state
-    // because the callback may need to compare old vs new values
-    // and the event object is passed by reference
     this.config.onEventResize?.(event, newStart, newEnd);
 
     // Convert Date objects to ISO format strings for internal event storage
@@ -500,7 +695,6 @@ export class Calendar<T = Dayjs> {
 
   private mergeConfig(config: CalendarConfig): ResolvedCalendarConfig {
     // Merge dateFormats with defaults
-    // Support backward compatibility: headerFormat takes precedence over dateFormats defaults
     const dateFormats = {
       date: config.dateFormats?.date || DEFAULT_DATE_FORMATS.date,
       dateTime: config.dateFormats?.dateTime || DEFAULT_DATE_FORMATS.dateTime,
@@ -534,12 +728,11 @@ export class Calendar<T = Dayjs> {
       showWeekends: config.view?.showWeekends ?? true,
     };
 
-    // Add optional properties only if they exist (for exactOptionalPropertyTypes)
+    // Add optional properties only if they exist
     if (config.view?.maxEventsPerRow !== undefined) {
       resolvedView.maxEventsPerRow = config.view.maxEventsPerRow;
     }
 
-    // Add filter functions only if they exist (for exactOptionalPropertyTypes)
     if (dayFilter) {
       resolvedView.dayFilter = dayFilter;
     }

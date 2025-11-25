@@ -2,11 +2,12 @@
  * @taskgenius/calendar
  *
  * A lightweight, configurable TypeScript calendar component library
- * with drag-and-drop support.
+ * with drag-and-drop support and extensible view system.
  */
 
 // Main Calendar class
 export { Calendar } from "./core/Calendar";
+export type { ExtendedCalendarConfig } from "./core/Calendar";
 
 // Core utilities
 export { EventManager } from "./core/EventManager";
@@ -26,6 +27,27 @@ export { TimeEngine } from "./engines/TimeEngine";
 // Renderers
 export { MonthRenderer } from "./renderers/MonthRenderer";
 export { TimeRenderer } from "./renderers/TimeRenderer";
+
+// Views - Extensible view system
+export {
+  // Base classes
+  BaseView,
+  ViewRegistry,
+  defaultViewRegistry,
+  // Built-in views
+  MonthView,
+  TimeView,
+  WeekView,
+  DayView,
+} from "./views";
+export type {
+  ViewContext,
+  ViewMeta,
+  ViewRenderOptions,
+  ViewClass,
+  ViewConstructor, // Legacy alias for ViewClass
+  ViewRegistrationOptions,
+} from "./views";
 
 // Styles
 export { applyThemeVariables, clearThemeVariables } from "./styles";
