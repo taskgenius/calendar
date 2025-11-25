@@ -1,0 +1,14 @@
+/**
+ * Main styles entry point for @taskgenius/calendar
+ *
+ * This file imports all CSS modules in the correct order.
+ * During build, these will be merged into a single styles.css file.
+ */
+
+/* === Base styles === */
+@import './base.css';
+
+/* === Component styles === */
+@import './month.css';
+@import './time.css';
+@import './events.css';
