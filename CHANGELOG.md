@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.9.0] - 2025-01-24
+## [0.9.0] - 2025-11-24
 
 ### ⚠️ BREAKING CHANGES
 
@@ -51,7 +51,7 @@ onEventDrop: (event, newStart: Date, newEnd: Date) => {
 - Updated API documentation with detailed callback descriptions
 - Clarified that `onEventDrop` is only for move operations
 
-## [0.8.0] - 2025-01-23
+## [0.8.0] - 2025-11-23
 
 ### ⚠️ BREAKING CHANGES
 
