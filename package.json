@@ -1,6 +1,6 @@
 {
   "name": "@taskgenius/calendar",
-  "version": "0.9.2",
+  "version": "0.9.3",
   "description": "A lightweight, configurable TypeScript calendar component with drag-and-drop support",
   "type": "module",
   "main": "./dist/index.cjs",
