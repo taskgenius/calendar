@@ -186,7 +186,11 @@ describe("MonthRenderer", () => {
 
       // Test with different column counts
       const testCases = [
-        { name: "7 columns (all days)", dayFilter: undefined, expectedColumns: 7 },
+        {
+          name: "7 columns (all days)",
+          dayFilter: undefined,
+          expectedColumns: 7,
+        },
         {
           name: "5 columns (no weekends)",
           dayFilter: (_: any, ctx: any) => !ctx.isWeekend,
@@ -230,7 +234,10 @@ describe("MonthRenderer", () => {
 
         // Extract percentage from calc(XX.XX% - 4px)
         const percentMatch = width.match(/calc\(([\d.]+)%/);
-        expect(percentMatch, `${name}: should have percentage in width`).toBeTruthy();
+        expect(
+          percentMatch,
+          `${name}: should have percentage in width`,
+        ).toBeTruthy();
 
         if (percentMatch) {
           const actualPercent = parseFloat(percentMatch[1]!);
@@ -244,7 +251,7 @@ describe("MonthRenderer", () => {
       });
     });
 
-    it("should not drift event bars when non-weekend days are filtered", () => {
+    it("should split event bars when non-weekend days are filtered", () => {
       const date = adapter.create("2025-11-03");
 
       // Hide Tuesday (dayOfWeek = 2)
@@ -268,31 +275,56 @@ describe("MonthRenderer", () => {
       const cells = firstRow?.querySelectorAll(".tg-month-cell");
       expect(cells).toHaveLength(6);
 
-      // Verify event bar uses 6-column layout
-      const eventBar = container.querySelector(
+      // When Tuesday is hidden, event (Mon-Wed) should be split into 2 segments:
+      // Segment 1: Monday only
+      // Segment 2: Wednesday only
+      const eventBars = container.querySelectorAll(
         '.tg-event-bar[data-eid="1"]',
-      ) as HTMLElement;
-      expect(eventBar).toBeTruthy();
+      );
 
-      // Event spans Mon-Wed (3 calendar days)
-      // Even though Tue is hidden, the event bar maintains its 3-day span for continuity
-      // With 6 visible columns, event spans 3/6 = 50%
-      const width = eventBar.style.width;
+      // Should have 2 segments
+      expect(eventBars.length).toBe(2);
 
-      // Format should be: calc(XX.XX% - 4px)
-      expect(width.startsWith("calc(")).toBeTruthy();
+      // Both segments should have segmentation classes
+      const firstSegment = eventBars[0] as HTMLElement;
+      const secondSegment = eventBars[1] as HTMLElement;
 
-      // Extract and verify percentage
-      const percentMatch = width.match(/calc\(([\d.]+)%/);
-      expect(percentMatch).toBeTruthy();
+      expect(
+        firstSegment.classList.contains("tg-event-segmented"),
+      ).toBeTruthy();
+      expect(
+        firstSegment.classList.contains("tg-event-segment-first"),
+      ).toBeTruthy();
+      expect(firstSegment.dataset["segmentIndex"]).toBe("0");
+      expect(firstSegment.dataset["totalSegments"]).toBe("2");
 
-      if (percentMatch) {
-        const actualPercent = parseFloat(percentMatch[1]!);
-        // Event maintains 3-day span even with hidden day = 50% (3/6 columns)
-        const expectedPercent = (3 / 6) * 100;
+      expect(
+        secondSegment.classList.contains("tg-event-segmented"),
+      ).toBeTruthy();
+      expect(
+        secondSegment.classList.contains("tg-event-segment-last"),
+      ).toBeTruthy();
+      expect(secondSegment.dataset["segmentIndex"]).toBe("1");
+      expect(secondSegment.dataset["totalSegments"]).toBe("2");
+
+      // Each segment should span 1 column = 16.67% of 6 columns
+      const expectedWidth = (1 / 6) * 100;
+      const widthMatch1 = firstSegment.style.width.match(/calc\(([\d.]+)%/);
+      const widthMatch2 = secondSegment.style.width.match(/calc\(([\d.]+)%/);
+
+      expect(widthMatch1).toBeTruthy();
+      expect(widthMatch2).toBeTruthy();
+
+      if (widthMatch1 && widthMatch2) {
+        const width1 = parseFloat(widthMatch1[1]!);
+        const width2 = parseFloat(widthMatch2[1]!);
         expect(
-          Math.abs(actualPercent - expectedPercent) < 0.1,
-          `Width should be 50% (3-day span across 6 visible columns), got ${actualPercent}%`,
+          Math.abs(width1 - expectedWidth) < 0.1,
+          `First segment width should be ~${expectedWidth.toFixed(2)}%, got ${width1}%`,
+        ).toBeTruthy();
+        expect(
+          Math.abs(width2 - expectedWidth) < 0.1,
+          `Second segment width should be ~${expectedWidth.toFixed(2)}%, got ${width2}%`,
         ).toBeTruthy();
       }
     });

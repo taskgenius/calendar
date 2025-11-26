@@ -5,7 +5,35 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.11.1]
+
+### 🐛 Bug Fixes
+
+- **Fix event segmentation with hidden days**: Events spanning across filtered (hidden) days now correctly split into separate segments
+  - Previously, segmentation used column indices to determine consecutive days, which failed when days were hidden via `dayFilter`
+  - Now uses actual calendar date comparison (`date + 1 day`) to detect gaps
+  - Example: With weekends hidden, a Fri→Mon event now correctly splits into two segments instead of appearing as one continuous bar
+  - Affects both `MonthEngine.calculateLayoutWithVisibleDays()` and `TimeEngine.calculateAllDayLayout()`
+
+- **Fix events displaying on disabled days**: Events no longer render on days marked as `disabled` in `dayFilter`
+  - Added `disabled` property to `VisibleDay<T>` interface
+  - `MonthRenderer` now passes `disabled` flag based on `dayFilter` result
+  - `MonthEngine` excludes disabled days when calculating event coverage
+  - Useful for "HalfMonth" style views where certain days should show no events
+
+### 🏗️ Code Quality
+
+- Remove unused `dateToColIdx` maps from both `MonthEngine` and `TimeEngine`
+  - These maps were built but never used in layout calculations
+
+### 🧪 Testing
+
+- Add 8 new tests in `MonthEngine.test.ts`:
+  - 5 tests for hidden-day gap segmentation (Tuesday hidden, weekends hidden, multiple gaps, all visible, outside range)
+  - 3 tests for `disabled` day event exclusion (HalfMonth scenario, only disabled days, disabled creates gaps)
+- Add 6 new tests in `TimeEngine.test.ts` for `calculateAllDayLayout`:
+  - Hidden day gaps, weekends hidden, all visible, multiple non-contiguous islands, empty events, empty columns
+- Total: 216 tests passing (100% success rate)
 
 ## [0.11.0] - 2025-11-25
 
@@ -500,6 +528,7 @@ new Calendar('#app', {
 - SOLID architecture
 
 [Unreleased]: https://github.com/taskgenius/calendar/compare/v0.11.0...HEAD
+[0.11.1]: https://github.com/taskgenius/calendar/compare/v0.11.0...v0.11.1
 [0.11.0]: https://github.com/taskgenius/calendar/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/taskgenius/calendar/compare/v0.9.3...v0.10.0
 [0.9.3]: https://github.com/taskgenius/calendar/compare/v0.9.2...v0.9.3

@@ -10,6 +10,7 @@ import type {
   DayFilterContext,
   DayFilterResult,
   DayRenderConfig,
+  VisibleDay,
 } from "../types";
 import type { MonthEngine } from "../engines/MonthEngine";
 import type { DragController } from "../core/DragController";
@@ -145,10 +146,42 @@ export class MonthRenderer<T> {
     row.style.setProperty("--tg-grid-columns", String(weekDays.length));
     row.style.gridTemplateColumns = `repeat(var(--tg-grid-columns), 1fr)`;
 
-    // Calculate and render event bars first to determine max slot
-    const weekStart = weekDays[0]!.date;
-    const weekEnd = weekDays[weekDays.length - 1]!.date;
-    const layout = this.engine.calculateLayout(events, weekStart, weekEnd);
+    // Build VisibleDay array for layout calculation
+    // This enables proper event segmentation when days are filtered
+    // Also check dayFilter for disabled state to exclude events from disabled days
+    const visibleDays: VisibleDay<T>[] = weekDays.map((day, index) => {
+      let isDisabled = false;
+
+      if (dayFilter) {
+        const dayOfWeek = this.adapter.day(day.date);
+        const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+        const today = this.adapter.create();
+        const context: DayFilterContext = {
+          isWeekend,
+          dayOfWeek,
+          isToday: this.adapter.isSame(day.date, today, "day"),
+          isThisMonth: this.adapter.isSame(day.date, currentDate, "month"),
+        };
+
+        const result = dayFilter(day.date, context);
+        if (typeof result === "object" && result.disabled) {
+          isDisabled = true;
+        }
+      }
+
+      return {
+        date: day.date,
+        dateStr: day.dateStr,
+        colIndex: index,
+        disabled: isDisabled,
+      };
+    });
+
+    // Calculate layout with visible days support for event segmentation
+    const layout = this.engine.calculateLayoutWithVisibleDays(
+      events,
+      visibleDays,
+    );
 
     // Split layout into visible and hidden events
     const visibleLayout =
@@ -347,6 +380,25 @@ export class MonthRenderer<T> {
     const el = createElement("div", "tg-event-base tg-event-bar");
     el.textContent = item.event.title;
     el.dataset["eid"] = item.event.id;
+
+    // Add segmentation data attributes and classes for styling
+    if (item.segmentIndex !== undefined && item.totalSegments !== undefined) {
+      el.dataset["segmentIndex"] = String(item.segmentIndex);
+      el.dataset["totalSegments"] = String(item.totalSegments);
+      el.classList.add("tg-event-segmented");
+
+      // Add specific classes for first/last segments
+      if (item.segmentIndex === 0) {
+        el.classList.add("tg-event-segment-first");
+      }
+      if (item.segmentIndex === item.totalSegments - 1) {
+        el.classList.add("tg-event-segment-last");
+      }
+      // Middle segments
+      if (item.segmentIndex > 0 && item.segmentIndex < item.totalSegments - 1) {
+        el.classList.add("tg-event-segment-middle");
+      }
+    }
 
     // Apply custom styling if hook is provided
     let bgColor = item.event.color || "#3b82f6";

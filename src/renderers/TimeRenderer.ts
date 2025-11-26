@@ -247,7 +247,7 @@ export class TimeRenderer<T> {
   }
 
   /**
-   * Render a single all-day event bar with spanning support
+   * Render a single all-day event bar with spanning and segmentation support
    */
   private renderAllDayEventBar(
     item: AllDayLayoutItem,
@@ -258,6 +258,25 @@ export class TimeRenderer<T> {
   ): HTMLElement {
     const el = createElement("div", "tg-event-base tg-allday-event");
     el.dataset["eid"] = item.event.id;
+
+    // Add segmentation data attributes and classes for styling
+    if (item.segmentIndex !== undefined && item.totalSegments !== undefined) {
+      el.dataset["segmentIndex"] = String(item.segmentIndex);
+      el.dataset["totalSegments"] = String(item.totalSegments);
+      el.classList.add("tg-event-segmented");
+
+      // Add specific classes for first/last segments
+      if (item.segmentIndex === 0) {
+        el.classList.add("tg-event-segment-first");
+      }
+      if (item.segmentIndex === item.totalSegments - 1) {
+        el.classList.add("tg-event-segment-last");
+      }
+      // Middle segments
+      if (item.segmentIndex > 0 && item.segmentIndex < item.totalSegments - 1) {
+        el.classList.add("tg-event-segment-middle");
+      }
+    }
 
     // Apply custom styling if hook is provided
     let bgColor = item.event.color || "#3b82f6";

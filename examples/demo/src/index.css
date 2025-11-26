@@ -303,6 +303,28 @@
     background-size: 10px 10px !important;
 }
 
+/* Half Month View - Blank cells for non-target days */
+.tg-month-cell.half-month-blank,
+.tg-month-cell.second-half-month-blank {
+    background-color: #fafafa !important;
+    pointer-events: none !important;
+}
+
+/* Active cells in half-month views */
+.tg-month-cell.half-month-active,
+.tg-month-cell.second-half-month-active {
+    background-color: #fff !important;
+}
+
+.tg-month-cell.half-month-blank,
+.tg-month-cell.second-half-month-blank {
+    display: none;
+}
+
+.tg-month-row:not(:has(.tg-month-cell:not(.half-month-blank))) {
+    border: unset;
+}
+
 /* Scrollbar Styling */
 .tg-time-grid-container::-webkit-scrollbar {
     width: 12px !important;

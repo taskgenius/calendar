@@ -262,11 +262,14 @@ export class TimeEngine<T> {
 
   /**
    * Calculate layout for all-day events across visible columns
-   * Handles multi-day spanning events similar to MonthEngine
+   * Handles multi-day spanning events with segmentation support
+   *
+   * When events span across non-visible (filtered) columns, they are split into
+   * multiple segments. Each segment represents a contiguous visible portion.
    *
    * @param allDayEvents - Array of all-day events
    * @param columns - Array of visible columns (from generateColumns)
-   * @returns Array of AllDayLayoutItem with positioning information
+   * @returns Array of AllDayLayoutItem with positioning information (may include segmented events)
    */
   calculateAllDayLayout(
     allDayEvents: CalendarEvent[],
@@ -276,17 +279,11 @@ export class TimeEngine<T> {
       return [];
     }
 
-    // Build a map of dateStr to column index for quick lookup
-    const dateToColIdx = new Map<string, number>();
-    for (let i = 0; i < columns.length; i++) {
-      dateToColIdx.set(columns[i]!.dateStr, i);
-    }
-
     const firstColDate = columns[0]!.date;
     const lastColDate = columns[columns.length - 1]!.date;
 
     // Filter events that overlap with the visible columns range
-    const visibleEvents = allDayEvents.filter((event) => {
+    const rangeEvents = allDayEvents.filter((event) => {
       const eventStart = this.adapter.startOf(
         this.adapter.parse(event.start),
         "day",
@@ -302,60 +299,131 @@ export class TimeEngine<T> {
       );
     });
 
-    // Calculate visual items with positioning
-    const visualItems: Array<AllDayLayoutItem & { sortKey: number }> =
-      visibleEvents.map((event) => {
-        const eventStart = this.adapter.startOf(
-          this.adapter.parse(event.start),
-          "day",
-        );
-        const eventEnd = this.adapter.startOf(
-          this.adapter.parse(event.end),
-          "day",
-        );
+    // Calculate segments for each event
+    const visualItems: Array<AllDayLayoutItem & { sortKey: number }> = [];
 
-        // Clamp to visible column boundaries
-        const displayStart = this.adapter.isBefore(eventStart, firstColDate)
-          ? firstColDate
-          : eventStart;
-        const displayEnd = this.adapter.isAfter(eventEnd, lastColDate)
-          ? lastColDate
-          : eventEnd;
+    for (const event of rangeEvents) {
+      const eventStart = this.adapter.startOf(
+        this.adapter.parse(event.start),
+        "day",
+      );
+      const eventEnd = this.adapter.startOf(
+        this.adapter.parse(event.end),
+        "day",
+      );
 
-        // Find start column index
-        const displayStartStr = this.adapter.format(
-          displayStart,
-          this.dateFormats.date,
-        );
-        let startIdx = dateToColIdx.get(displayStartStr) ?? 0;
+      // Find all visible columns that this event covers
+      const coveredColumns: Array<{
+        colIndex: number;
+        date: T;
+        dateStr: string;
+      }> = [];
 
-        // Calculate span by counting columns from startIdx to end date
-        let span = 0;
-        for (let i = startIdx; i < columns.length; i++) {
-          const colDate = columns[i]!.date;
-          if (
-            this.adapter.isBefore(colDate, displayStart, "day") ||
-            this.adapter.isAfter(colDate, displayEnd, "day")
-          ) {
-            break;
-          }
-          span++;
+      for (let i = 0; i < columns.length; i++) {
+        const col = columns[i]!;
+        if (
+          !this.adapter.isBefore(col.date, eventStart, "day") &&
+          !this.adapter.isAfter(col.date, eventEnd, "day")
+        ) {
+          coveredColumns.push({
+            colIndex: i,
+            date: col.date,
+            dateStr: col.dateStr,
+          });
         }
+      }
 
-        // Ensure at least 1 span
-        span = Math.max(1, span);
+      if (coveredColumns.length === 0) {
+        continue; // Event doesn't cover any visible columns
+      }
 
-        return {
-          event,
-          startIdx,
-          span,
-          slot: 0, // Will be calculated below
-          isStart: !this.adapter.isBefore(eventStart, firstColDate, "day"),
-          isEnd: !this.adapter.isAfter(eventEnd, lastColDate, "day"),
-          // Sort key: start index first, then by span (longer events first)
-          sortKey: startIdx * 1000 - span,
-        };
+      // Group consecutive covered columns into segments
+      // IMPORTANT: Consecutive means actual calendar dates differ by exactly 1 day,
+      // NOT column indices. This ensures events are split when hidden days create gaps.
+      const segments: Array<{
+        startIdx: number;
+        span: number;
+        isEventStart: boolean;
+        isEventEnd: boolean;
+      }> = [];
+
+      let segmentStart = coveredColumns[0]!;
+      let prevCol = segmentStart;
+      let segmentSpan = 1;
+
+      for (let i = 1; i < coveredColumns.length; i++) {
+        const current = coveredColumns[i]!;
+
+        // Check if this column is consecutive in actual calendar (differs by exactly 1 day)
+        const nextExpectedDate = this.adapter.add(prevCol.date, 1, "day");
+        const isConsecutive = this.adapter.isSame(
+          current.date,
+          nextExpectedDate,
+          "day",
+        );
+
+        if (isConsecutive) {
+          segmentSpan++;
+          prevCol = current;
+        } else {
+          // Non-consecutive: save current segment and start a new one
+          const isEventStart = this.adapter.isSame(
+            segmentStart.date,
+            eventStart,
+            "day",
+          );
+          const isEventEnd = this.adapter.isSame(prevCol.date, eventEnd, "day");
+
+          segments.push({
+            startIdx: segmentStart.colIndex,
+            span: segmentSpan,
+            isEventStart,
+            isEventEnd,
+          });
+
+          // Start new segment
+          segmentStart = current;
+          prevCol = current;
+          segmentSpan = 1;
+        }
+      }
+
+      // Don't forget the last segment
+      const isEventStartFinal = this.adapter.isSame(
+        segmentStart.date,
+        eventStart,
+        "day",
+      );
+      const isEventEndFinal = this.adapter.isSame(
+        prevCol.date,
+        eventEnd,
+        "day",
+      );
+
+      segments.push({
+        startIdx: segmentStart.colIndex,
+        span: segmentSpan,
+        isEventStart: isEventStartFinal,
+        isEventEnd: isEventEndFinal,
       });
+
+      // Create layout items for each segment
+      const totalSegments = segments.length;
+      segments.forEach((seg, idx) => {
+        const item: AllDayLayoutItem & { sortKey: number } = {
+          event,
+          startIdx: seg.startIdx,
+          span: seg.span,
+          slot: 0, // Will be calculated below
+          isStart: seg.isEventStart,
+          isEnd: seg.isEventEnd,
+          sortKey: seg.startIdx * 1000 - seg.span,
+          // Add segmentation info only if event was split
+          ...(totalSegments > 1 ? { segmentIndex: idx, totalSegments } : {}),
+        };
+        visualItems.push(item);
+      });
+    }
 
     // Sort by start index, then by span (descending)
     visualItems.sort((a, b) => a.sortKey - b.sortKey);

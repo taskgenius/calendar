@@ -57,7 +57,16 @@ export interface DayRenderConfig {
   className?: string;
   /** Inline styles to apply */
   style?: Partial<CSSStyleDeclaration>;
-  /** Whether to disable interactions on this day */
+  /**
+   * Whether to disable this day
+   * When true:
+   * - User interactions are disabled (clicks, drag, etc.)
+   * - Events will NOT be displayed on this day
+   * - Visual styling is applied via CSS (.tg-disabled class)
+   *
+   * Useful for "HalfMonth" style views where certain days should be visible
+   * but inactive (no events, no interactions).
+   */
   disabled?: boolean;
 }
 
@@ -350,39 +359,61 @@ export interface DateFormatConfig {
 
 /**
  * Layout information for a month view event
+ * Supports event segmentation when dayFilter hides intermediate days
  */
 export interface MonthLayoutItem {
   /** Original event data */
   event: CalendarEvent;
-  /** Start index within week (0-6) */
+  /** Start index within visible columns (0-based) */
   startIdx: number;
-  /** Number of days the event spans */
+  /** Number of visible columns the event spans */
   span: number;
   /** Vertical slot position */
   slot: number;
-  /** Whether this is the start of the event */
+  /** Whether this segment is the start of the original event */
   isStart: boolean;
-  /** Whether this is the end of the event */
+  /** Whether this segment is the end of the original event */
   isEnd: boolean;
+  /**
+   * Segment index when event is split by filtered days (0-based)
+   * undefined if event is not segmented
+   */
+  segmentIndex?: number;
+  /**
+   * Total number of segments for this event
+   * undefined if event is not segmented
+   */
+  totalSegments?: number;
 }
 
 /**
  * Layout information for an all-day event in time view (week/day)
  * Similar to MonthLayoutItem but used in the all-day section of time views
+ * Supports event segmentation when dayFilter hides intermediate days
  */
 export interface AllDayLayoutItem {
   /** Original event data */
   event: CalendarEvent;
   /** Start column index (0-based, maps to visible columns) */
   startIdx: number;
-  /** Number of columns the event spans */
+  /** Number of visible columns the event spans */
   span: number;
   /** Vertical slot position (row index for stacking) */
   slot: number;
-  /** Whether this segment is the start of the event */
+  /** Whether this segment is the start of the original event */
   isStart: boolean;
-  /** Whether this segment is the end of the event */
+  /** Whether this segment is the end of the original event */
   isEnd: boolean;
+  /**
+   * Segment index when event is split by filtered days (0-based)
+   * undefined if event is not segmented
+   */
+  segmentIndex?: number;
+  /**
+   * Total number of segments for this event
+   * undefined if event is not segmented
+   */
+  totalSegments?: number;
 }
 
 /**
@@ -415,6 +446,30 @@ export interface GridCell<T> {
   date: T;
   /** Formatted date string (yyyy-MM-dd) */
   dateStr: string;
+}
+
+/**
+ * Visible day information for layout calculation
+ * Used to calculate event spans across filtered (visible) days only
+ *
+ * When days are filtered via `dayFilter`, events that span across hidden days
+ * are automatically split into separate segments. The segmentation uses actual
+ * calendar date comparison (not column indices) to correctly detect gaps.
+ */
+export interface VisibleDay<T> {
+  /** Date object */
+  date: T;
+  /** Formatted date string (yyyy-MM-dd) */
+  dateStr: string;
+  /** Index in the visible columns (0-based) */
+  colIndex: number;
+  /**
+   * Whether this day is disabled (from dayFilter's DayRenderConfig.disabled)
+   * When true, events will NOT be displayed on this day even though the day
+   * cell itself is visible. This allows "HalfMonth" style views where some
+   * days are rendered but show no events.
+   */
+  disabled?: boolean;
 }
 
 /**

@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { TimeEngine } from "../../../src/engines/TimeEngine";
 import { DayJsAdapter } from "../../../src/adapters/DayJsAdapter";
 import { DEFAULT_DATE_FORMATS } from "../../../src/constants";
-import type { CalendarEvent } from "../../../src/types";
+import type { CalendarEvent, TimeColumn } from "../../../src/types";
 
 describe("TimeEngine", () => {
   const adapter = new DayJsAdapter();
@@ -263,6 +263,205 @@ describe("TimeEngine", () => {
 
       // Reset
       engine.setCellHeight(60);
+    });
+  });
+
+  describe("calculateAllDayLayout", () => {
+    it("should split all-day event when hidden days create calendar gaps", () => {
+      // All-day event spans Mon-Wed (Nov 3-5, 2025)
+      const events: CalendarEvent[] = [
+        {
+          id: "1",
+          title: "All Day Event",
+          start: "2025-11-03 00:00", // Monday
+          end: "2025-11-05 00:00", // Wednesday (end exclusive, so covers Mon-Tue)
+          color: "#3b82f6",
+        },
+      ];
+
+      // Visible columns: Mon, Wed (Tuesday hidden)
+      const columns: TimeColumn<any>[] = [
+        { date: adapter.create("2025-11-03"), dateStr: "2025-11-03" }, // Mon
+        // Tuesday (Nov 4) hidden
+        { date: adapter.create("2025-11-05"), dateStr: "2025-11-05" }, // Wed
+      ];
+
+      const layout = engine.calculateAllDayLayout(events, columns);
+
+      // Event should be split because Mon and Wed are NOT consecutive calendar days
+      expect(layout.length).toBe(2);
+
+      // First segment: Monday only
+      expect(layout[0]!.startIdx).toBe(0);
+      expect(layout[0]!.span).toBe(1);
+      expect(layout[0]!.isStart).toBe(true);
+      expect(layout[0]!.isEnd).toBe(false);
+      expect(layout[0]!.segmentIndex).toBe(0);
+      expect(layout[0]!.totalSegments).toBe(2);
+
+      // Second segment: Wednesday only
+      expect(layout[1]!.startIdx).toBe(1);
+      expect(layout[1]!.span).toBe(1);
+      expect(layout[1]!.isStart).toBe(false);
+      expect(layout[1]!.isEnd).toBe(true);
+      expect(layout[1]!.segmentIndex).toBe(1);
+      expect(layout[1]!.totalSegments).toBe(2);
+    });
+
+    it("should split all-day event when weekends are hidden (Fri-Mon)", () => {
+      // All-day event Fri-Mon (Nov 7-10, 2025) - crosses weekend
+      // Note: end date is inclusive in this implementation
+      const events: CalendarEvent[] = [
+        {
+          id: "1",
+          title: "Weekend Cross",
+          start: "2025-11-07 00:00", // Friday
+          end: "2025-11-10 00:00", // Monday (inclusive)
+          color: "#3b82f6",
+        },
+      ];
+
+      // Visible columns: Mon-Fri (weekends hidden) - two weeks
+      const columns: TimeColumn<any>[] = [
+        { date: adapter.create("2025-11-03"), dateStr: "2025-11-03" }, // Mon
+        { date: adapter.create("2025-11-04"), dateStr: "2025-11-04" }, // Tue
+        { date: adapter.create("2025-11-05"), dateStr: "2025-11-05" }, // Wed
+        { date: adapter.create("2025-11-06"), dateStr: "2025-11-06" }, // Thu
+        { date: adapter.create("2025-11-07"), dateStr: "2025-11-07" }, // Fri
+        // Saturday (Nov 8) hidden
+        // Sunday (Nov 9) hidden
+        { date: adapter.create("2025-11-10"), dateStr: "2025-11-10" }, // Mon
+        { date: adapter.create("2025-11-11"), dateStr: "2025-11-11" }, // Tue
+      ];
+
+      const layout = engine.calculateAllDayLayout(events, columns);
+
+      // Event should be split into 2 segments due to hidden weekend
+      expect(layout.length).toBe(2);
+
+      // First segment: Friday only
+      expect(layout[0]!.startIdx).toBe(4);
+      expect(layout[0]!.span).toBe(1);
+      expect(layout[0]!.isStart).toBe(true);
+      expect(layout[0]!.isEnd).toBe(false);
+      expect(layout[0]!.segmentIndex).toBe(0);
+      expect(layout[0]!.totalSegments).toBe(2);
+
+      // Second segment: Monday only
+      expect(layout[1]!.startIdx).toBe(5);
+      expect(layout[1]!.span).toBe(1);
+      expect(layout[1]!.isStart).toBe(false);
+      expect(layout[1]!.isEnd).toBe(true);
+      expect(layout[1]!.segmentIndex).toBe(1);
+      expect(layout[1]!.totalSegments).toBe(2);
+    });
+
+    it("should not split all-day event when all days are visible", () => {
+      // All-day event Mon-Wed (end date is inclusive)
+      const events: CalendarEvent[] = [
+        {
+          id: "1",
+          title: "Continuous Event",
+          start: "2025-11-03 00:00", // Monday
+          end: "2025-11-05 00:00", // Wednesday (inclusive)
+          color: "#3b82f6",
+        },
+      ];
+
+      // All days visible
+      const columns: TimeColumn<any>[] = [
+        { date: adapter.create("2025-11-03"), dateStr: "2025-11-03" }, // Mon
+        { date: adapter.create("2025-11-04"), dateStr: "2025-11-04" }, // Tue
+        { date: adapter.create("2025-11-05"), dateStr: "2025-11-05" }, // Wed
+        { date: adapter.create("2025-11-06"), dateStr: "2025-11-06" }, // Thu
+        { date: adapter.create("2025-11-07"), dateStr: "2025-11-07" }, // Fri
+      ];
+
+      const layout = engine.calculateAllDayLayout(events, columns);
+
+      // Event should NOT be split
+      expect(layout.length).toBe(1);
+      expect(layout[0]!.startIdx).toBe(0);
+      expect(layout[0]!.span).toBe(3); // Mon-Wed
+      expect(layout[0]!.isStart).toBe(true);
+      expect(layout[0]!.isEnd).toBe(true);
+      expect(layout[0]!.segmentIndex).toBeUndefined();
+      expect(layout[0]!.totalSegments).toBeUndefined();
+    });
+
+    it("should handle multiple non-contiguous visible islands", () => {
+      // All-day event spanning full week (end date is inclusive)
+      const events: CalendarEvent[] = [
+        {
+          id: "1",
+          title: "Week Long",
+          start: "2025-11-03 00:00", // Monday
+          end: "2025-11-07 00:00", // Friday (inclusive)
+          color: "#3b82f6",
+        },
+      ];
+
+      // Only Mon, Wed, Fri visible (Tue and Thu hidden)
+      const columns: TimeColumn<any>[] = [
+        { date: adapter.create("2025-11-03"), dateStr: "2025-11-03" }, // Mon
+        // Tue hidden
+        { date: adapter.create("2025-11-05"), dateStr: "2025-11-05" }, // Wed
+        // Thu hidden
+        { date: adapter.create("2025-11-07"), dateStr: "2025-11-07" }, // Fri
+      ];
+
+      const layout = engine.calculateAllDayLayout(events, columns);
+
+      // Event should be split into 3 segments
+      expect(layout.length).toBe(3);
+
+      // First segment: Monday
+      expect(layout[0]!.startIdx).toBe(0);
+      expect(layout[0]!.span).toBe(1);
+      expect(layout[0]!.isStart).toBe(true);
+      expect(layout[0]!.isEnd).toBe(false);
+      expect(layout[0]!.segmentIndex).toBe(0);
+      expect(layout[0]!.totalSegments).toBe(3);
+
+      // Second segment: Wednesday
+      expect(layout[1]!.startIdx).toBe(1);
+      expect(layout[1]!.span).toBe(1);
+      expect(layout[1]!.isStart).toBe(false);
+      expect(layout[1]!.isEnd).toBe(false);
+      expect(layout[1]!.segmentIndex).toBe(1);
+      expect(layout[1]!.totalSegments).toBe(3);
+
+      // Third segment: Friday
+      expect(layout[2]!.startIdx).toBe(2);
+      expect(layout[2]!.span).toBe(1);
+      expect(layout[2]!.isStart).toBe(false);
+      expect(layout[2]!.isEnd).toBe(true);
+      expect(layout[2]!.segmentIndex).toBe(2);
+      expect(layout[2]!.totalSegments).toBe(3);
+    });
+
+    it("should return empty array for empty events", () => {
+      const columns: TimeColumn<any>[] = [
+        { date: adapter.create("2025-11-03"), dateStr: "2025-11-03" },
+      ];
+
+      const layout = engine.calculateAllDayLayout([], columns);
+      expect(layout).toHaveLength(0);
+    });
+
+    it("should return empty array for empty columns", () => {
+      const events: CalendarEvent[] = [
+        {
+          id: "1",
+          title: "Event",
+          start: "2025-11-03 00:00",
+          end: "2025-11-04 00:00",
+          color: "#3b82f6",
+        },
+      ];
+
+      const layout = engine.calculateAllDayLayout(events, []);
+      expect(layout).toHaveLength(0);
     });
   });
 });

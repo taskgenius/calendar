@@ -8,6 +8,7 @@ import type {
   MonthLayoutItem,
   GridCell,
   DateFormatConfig,
+  VisibleDay,
 } from "../types";
 import type { DayFilterContext, DayFilterResult } from "../types";
 
@@ -119,108 +120,168 @@ export class MonthEngine<T> {
   }
 
   /**
-   * Calculate layout for events within a week
-   * Handles multi-day events, event overlapping, and slot allocation
+   * Calculate layout for events within visible days
+   * Handles multi-day events, event overlapping, slot allocation, and event segmentation
+   *
+   * When events span across filtered (hidden) days, they are split into multiple segments.
+   * Each segment represents a contiguous visible portion of the event.
    *
    * @param events - All calendar events
-   * @param weekStart - Start date of the week
-   * @param weekEnd - End date of the week
-   * @returns Array of MonthLayoutItem with positioning information
+   * @param visibleDays - Array of visible days with their column indices
+   * @returns Array of MonthLayoutItem with positioning information (may include segmented events)
    */
-  calculateLayout(
+  calculateLayoutWithVisibleDays(
     events: CalendarEvent[],
-    weekStart: T,
-    weekEnd: T,
+    visibleDays: VisibleDay<T>[],
   ): MonthLayoutItem[] {
-    // Filter events that overlap with this week
-    const weekEvents = events.filter((e) => {
-      const eventStart = this.adapter.parse(e.start);
-      const eventEnd = this.adapter.parse(e.end);
+    if (visibleDays.length === 0) {
+      return [];
+    }
+
+    const firstVisibleDate = visibleDays[0]!.date;
+    const lastVisibleDate = visibleDays[visibleDays.length - 1]!.date;
+
+    // Filter events that overlap with the visible date range
+    const rangeEvents = events.filter((e) => {
+      const eventStart = this.adapter.startOf(
+        this.adapter.parse(e.start),
+        "day",
+      );
+      const eventEnd = this.adapter.startOf(this.adapter.parse(e.end), "day");
 
       return (
-        !this.adapter.isBefore(eventEnd, weekStart) &&
-        !this.adapter.isAfter(eventStart, weekEnd)
+        !this.adapter.isAfter(eventStart, lastVisibleDate, "day") &&
+        !this.adapter.isBefore(eventEnd, firstVisibleDate, "day")
       );
     });
 
-    // Calculate visual items with positioning
-    const visualItems: Array<MonthLayoutItem & { sortKey: number }> =
-      weekEvents.map((e) => {
-        const eventStart = this.adapter.parse(e.start);
-        const eventEnd = this.adapter.parse(e.end);
+    // Calculate segments for each event
+    const visualItems: Array<MonthLayoutItem & { sortKey: number }> = [];
 
-        // Clamp to week boundaries
-        const displayStart = this.adapter.isBefore(eventStart, weekStart)
-          ? weekStart
-          : eventStart;
-        const displayEnd = this.adapter.isAfter(eventEnd, weekEnd)
-          ? weekEnd
-          : eventEnd;
+    for (const event of rangeEvents) {
+      const eventStart = this.adapter.startOf(
+        this.adapter.parse(event.start),
+        "day",
+      );
+      const eventEnd = this.adapter.startOf(
+        this.adapter.parse(event.end),
+        "day",
+      );
 
-        // Normalize dates to day start (00:00:00) to avoid time-based truncation in diff
-        // This ensures multi-day events span correctly across all calendar days
-        const normalizedDisplayStart = this.adapter.startOf(
-          displayStart,
-          "day",
-        );
-        const normalizedDisplayEnd = this.adapter.startOf(displayEnd, "day");
-        const normalizedWeekStart = this.adapter.startOf(weekStart, "day");
+      // Find all visible days that this event covers
+      // Exclude disabled days (events should not be displayed on disabled days)
+      const coveredDays: Array<{ colIndex: number; date: T; dateStr: string }> =
+        [];
 
-        let startIdx = this.adapter.diff(
-          normalizedDisplayStart,
-          normalizedWeekStart,
-          "day",
-        );
-        let span =
-          this.adapter.diff(
-            normalizedDisplayEnd,
-            normalizedDisplayStart,
-            "day",
-          ) + 1;
-
-        // Adjust indices if weekends are hidden
-        if (!this.showWeekends) {
-          // Count non-weekend days between weekStart and displayStart
-          let adjustedStartIdx = 0;
-          let tempDate = weekStart;
-          while (this.adapter.isBefore(tempDate, displayStart)) {
-            const dayOfWeek = this.adapter.day(tempDate);
-            if (dayOfWeek !== 0 && dayOfWeek !== 6) {
-              adjustedStartIdx++;
-            }
-            tempDate = this.adapter.add(tempDate, 1, "day");
-          }
-
-          // Count non-weekend days in span
-          let adjustedSpan = 0;
-          tempDate = displayStart;
-          const spanEnd = this.adapter.add(displayStart, span - 1, "day");
-          while (
-            this.adapter.isBefore(tempDate, spanEnd) ||
-            this.adapter.isSame(tempDate, spanEnd, "day")
-          ) {
-            const dayOfWeek = this.adapter.day(tempDate);
-            if (dayOfWeek !== 0 && dayOfWeek !== 6) {
-              adjustedSpan++;
-            }
-            tempDate = this.adapter.add(tempDate, 1, "day");
-          }
-
-          startIdx = adjustedStartIdx;
-          span = adjustedSpan;
+      for (const day of visibleDays) {
+        // Skip disabled days - events should not appear on them
+        if (day.disabled) {
+          continue;
         }
 
-        return {
-          event: e,
-          startIdx,
-          span,
-          slot: 0, // Will be calculated below
-          isStart: !this.adapter.isBefore(eventStart, weekStart),
-          isEnd: !this.adapter.isAfter(eventEnd, weekEnd),
-          // Sort key: start index first, then by span (longer events first)
-          sortKey: startIdx * 1000 - span,
-        };
+        if (
+          !this.adapter.isBefore(day.date, eventStart, "day") &&
+          !this.adapter.isAfter(day.date, eventEnd, "day")
+        ) {
+          coveredDays.push({
+            colIndex: day.colIndex,
+            date: day.date,
+            dateStr: day.dateStr,
+          });
+        }
+      }
+
+      if (coveredDays.length === 0) {
+        continue; // Event doesn't cover any visible days
+      }
+
+      // Group consecutive covered days into segments
+      // IMPORTANT: Consecutive means actual calendar dates differ by exactly 1 day,
+      // NOT column indices. This ensures events are split when hidden days create gaps.
+      const segments: Array<{
+        startIdx: number;
+        span: number;
+        isEventStart: boolean;
+        isEventEnd: boolean;
+      }> = [];
+
+      let segmentStart = coveredDays[0]!;
+      let prevDay = segmentStart;
+      let segmentSpan = 1;
+
+      for (let i = 1; i < coveredDays.length; i++) {
+        const current = coveredDays[i]!;
+
+        // Check if this day is consecutive in actual calendar (differs by exactly 1 day)
+        const nextExpectedDate = this.adapter.add(prevDay.date, 1, "day");
+        const isConsecutive = this.adapter.isSame(
+          current.date,
+          nextExpectedDate,
+          "day",
+        );
+
+        if (isConsecutive) {
+          segmentSpan++;
+          prevDay = current;
+        } else {
+          // Non-consecutive: save current segment and start a new one
+          const isEventStart = this.adapter.isSame(
+            segmentStart.date,
+            eventStart,
+            "day",
+          );
+          const isEventEnd = this.adapter.isSame(prevDay.date, eventEnd, "day");
+
+          segments.push({
+            startIdx: segmentStart.colIndex,
+            span: segmentSpan,
+            isEventStart,
+            isEventEnd,
+          });
+
+          // Start new segment
+          segmentStart = current;
+          prevDay = current;
+          segmentSpan = 1;
+        }
+      }
+
+      // Don't forget the last segment
+      const isEventStartFinal = this.adapter.isSame(
+        segmentStart.date,
+        eventStart,
+        "day",
+      );
+      const isEventEndFinal = this.adapter.isSame(
+        prevDay.date,
+        eventEnd,
+        "day",
+      );
+
+      segments.push({
+        startIdx: segmentStart.colIndex,
+        span: segmentSpan,
+        isEventStart: isEventStartFinal,
+        isEventEnd: isEventEndFinal,
       });
+
+      // Create layout items for each segment
+      const totalSegments = segments.length;
+      segments.forEach((seg, idx) => {
+        const item: MonthLayoutItem & { sortKey: number } = {
+          event,
+          startIdx: seg.startIdx,
+          span: seg.span,
+          slot: 0, // Will be calculated below
+          isStart: seg.isEventStart,
+          isEnd: seg.isEventEnd,
+          sortKey: seg.startIdx * 1000 - seg.span,
+          // Add segmentation info only if event was split
+          ...(totalSegments > 1 ? { segmentIndex: idx, totalSegments } : {}),
+        };
+        visualItems.push(item);
+      });
+    }
 
     // Sort by start index, then by span (descending)
     visualItems.sort((a, b) => a.sortKey - b.sortKey);
@@ -245,6 +306,49 @@ export class MonthEngine<T> {
 
     // Remove sortKey from result
     return visualItems.map(({ sortKey: _sortKey, ...item }) => item);
+  }
+
+  /**
+   * Calculate layout for events within a week (legacy API for backward compatibility)
+   * Handles multi-day events, event overlapping, and slot allocation
+   *
+   * @deprecated Use calculateLayoutWithVisibleDays for proper dayFilter support
+   * @param events - All calendar events
+   * @param weekStart - Start date of the week
+   * @param weekEnd - End date of the week
+   * @returns Array of MonthLayoutItem with positioning information
+   */
+  calculateLayout(
+    events: CalendarEvent[],
+    weekStart: T,
+    weekEnd: T,
+  ): MonthLayoutItem[] {
+    // Build visible days array from weekStart to weekEnd
+    const visibleDays: VisibleDay<T>[] = [];
+    let curr = weekStart;
+    let colIndex = 0;
+
+    while (
+      this.adapter.isBefore(curr, weekEnd, "day") ||
+      this.adapter.isSame(curr, weekEnd, "day")
+    ) {
+      const dayOfWeek = this.adapter.day(curr);
+      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+
+      // Apply showWeekends filter
+      if (this.showWeekends || !isWeekend) {
+        visibleDays.push({
+          date: curr,
+          dateStr: this.adapter.format(curr, this.dateFormats.date),
+          colIndex,
+        });
+        colIndex++;
+      }
+
+      curr = this.adapter.add(curr, 1, "day");
+    }
+
+    return this.calculateLayoutWithVisibleDays(events, visibleDays);
   }
 
   /**

@@ -1,17 +1,48 @@
-import { Calendar, hideWeekends } from "../../../src";
-import type {
-  CalendarEvent,
-  ViewType,
-  CalendarConfig,
-} from "../../../src/types";
+import {
+  Calendar,
+  ViewRegistry,
+  MonthView,
+  WeekView,
+  DayView,
+} from "../../../src";
+import type { ExtendedCalendarConfig } from "../../../src/core/Calendar";
+import type { CalendarEvent, ViewType } from "../../../src/types";
 import "../../../src/styles/styles.css";
 import "./index.css";
+
+// Import custom views
+import { customViews, getCustomViewInfo } from "./custom-views";
+
+// =============================================================================
+// View Registry Setup
+// =============================================================================
+
+/**
+ * Create a custom registry with built-in and custom views
+ */
+function createViewRegistry(): ViewRegistry {
+  const registry = new ViewRegistry();
+
+  // Register built-in views
+  registry.register(MonthView);
+  registry.register(WeekView);
+  registry.register(DayView);
+
+  // Register all custom views
+  for (const ViewClass of customViews) {
+    registry.register(ViewClass);
+  }
+
+  return registry;
+}
+
+const viewRegistry = createViewRegistry();
 
 // =============================================================================
 // Configuration State
 // =============================================================================
 interface ConfigState {
-  view: ViewType;
+  view: string; // Changed from ViewType to string to support custom views
   showWeekends: boolean;
   firstDayOfWeek: 0 | 1 | 6;
   maxEventsPerRow: number;
@@ -42,19 +73,26 @@ function createCalendar(): void {
   // Clear existing
   container.innerHTML = "";
 
-  // Build day filter based on active days
+  // Build day filter based on active days (only for built-in views)
   const dayFilter = (date: unknown, context: { dayOfWeek: number }) => {
     return state.activeDays.includes(context.dayOfWeek);
   };
 
-  const config: CalendarConfig = {
+  // Only use dayFilter for built-in views (custom views handle their own filtering)
+  const isBuiltInView = ["month", "week", "day"].includes(state.view);
+  const shouldUseDayFilter = isBuiltInView && state.activeDays.length < 7;
+
+  const config: ExtendedCalendarConfig = {
+    // Pass custom view registry
+    viewRegistry,
+    registerBuiltInViews: false, // We already registered them
     view: {
-      type: state.view,
+      type: state.view as ViewType,
       showDateHeader: true,
       maxEventsPerRow: state.maxEventsPerRow,
       firstDayOfWeek: state.firstDayOfWeek,
       showWeekends: state.showWeekends,
-      dayFilter: state.activeDays.length < 7 ? dayFilter : undefined,
+      dayFilter: shouldUseDayFilter ? dayFilter : undefined,
     },
     events: getInitialEvents(),
     draggable: {
@@ -118,6 +156,7 @@ function createCalendar(): void {
     },
   };
 
+  // Create calendar with custom registry
   calendar = new Calendar("#app", config);
   updateConfigDisplay();
 }
@@ -189,30 +228,45 @@ function getInitialEvents(): CalendarEvent[] {
       end: formatDate(addDays(startOfWeek, 5), 17, 0),
       color: colors.purple,
     },
-    // Additional events to test row height adjustment
+    // Weekend events for testing weekend view
     {
       id: "8",
+      title: "Weekend Brunch",
+      start: formatDate(addDays(startOfWeek, 6), 11, 0),
+      end: formatDate(addDays(startOfWeek, 6), 13, 0),
+      color: colors.pink,
+    },
+    {
+      id: "9",
+      title: "Family Time",
+      start: formatDate(addDays(startOfWeek, 0), 14, 0),
+      end: formatDate(addDays(startOfWeek, 0), 18, 0),
+      color: colors.orange,
+    },
+    // Additional events to test row height adjustment
+    {
+      id: "10",
       title: "Event A",
       start: formatDate(addDays(startOfWeek, 1), 0, 0),
       end: formatDate(addDays(startOfWeek, 1), 0, 0),
       color: colors.pink,
     },
     {
-      id: "9",
+      id: "11",
       title: "Event B",
       start: formatDate(addDays(startOfWeek, 1), 0, 0),
       end: formatDate(addDays(startOfWeek, 1), 0, 0),
       color: colors.orange,
     },
     {
-      id: "10",
+      id: "12",
       title: "Event C",
       start: formatDate(addDays(startOfWeek, 1), 0, 0),
       end: formatDate(addDays(startOfWeek, 1), 0, 0),
       color: colors.green,
     },
     {
-      id: "11",
+      id: "13",
       title: "Event D",
       start: formatDate(addDays(startOfWeek, 1), 0, 0),
       end: formatDate(addDays(startOfWeek, 1), 0, 0),
@@ -280,9 +334,16 @@ function log(message: string): void {
 function updateConfigDisplay(): void {
   const configEl = document.getElementById("config-display");
   if (configEl) {
+    const isCustomView = !["month", "week", "day"].includes(state.view);
     const displayConfig = {
       view: {
         type: state.view,
+        isCustomView,
+        ...(isCustomView && {
+          customViewInfo: getCustomViewInfo().find(
+            (v) => v.type === state.view,
+          ),
+        }),
         showWeekends: state.showWeekends,
         firstDayOfWeek: state.firstDayOfWeek,
         maxEventsPerRow: state.maxEventsPerRow,
@@ -292,6 +353,7 @@ function updateConfigDisplay(): void {
         enabled: state.draggable,
         snapMinutes: state.snapMinutes,
       },
+      registeredViews: viewRegistry.getAll().map((v) => v.type),
     };
     configEl.textContent = JSON.stringify(displayConfig, null, 2);
   }
@@ -301,17 +363,27 @@ function updateConfigDisplay(): void {
 // UI Control Functions (exposed to window)
 // =============================================================================
 
-// View control
-(window as any).setView = (view: ViewType) => {
+// View control - supports both built-in and custom views
+(window as any).setView = (view: string) => {
   state.view = view;
-  calendar.setView(view);
+  calendar.setView(view as ViewType);
   updateViewButtons();
   updateConfigDisplay();
 };
 
 function updateViewButtons(): void {
-  const views: ViewType[] = ["month", "week", "day"];
-  views.forEach((v) => {
+  // Update built-in view buttons
+  const builtInViews = ["month", "week", "day"];
+  builtInViews.forEach((v) => {
+    const btn = document.getElementById(`btn-${v}`);
+    if (btn) {
+      btn.classList.toggle("active", v === state.view);
+    }
+  });
+
+  // Update custom view buttons
+  const customViewTypes = customViews.map((V) => V.meta.type);
+  customViewTypes.forEach((v) => {
     const btn = document.getElementById(`btn-${v}`);
     if (btn) {
       btn.classList.toggle("active", v === state.view);
@@ -505,10 +577,47 @@ let eventCounter = 100;
 };
 
 // =============================================================================
+// Custom Views UI
+// =============================================================================
+
+/**
+ * Initialize the custom views section in the sidebar
+ */
+function initCustomViewsSection(): void {
+  const container = document.getElementById("custom-views-container");
+  if (!container) return;
+
+  const viewsInfo = getCustomViewInfo();
+
+  container.innerHTML = viewsInfo
+    .map(
+      (view) => `
+    <button
+      class="btn-brutal custom-view-btn"
+      id="btn-${view.type}"
+      onclick="setView('${view.type}')"
+      title="${view.description}"
+    >
+      <span class="view-label">${view.label}</span>
+      <span class="view-short">${view.shortLabel}</span>
+    </button>
+  `,
+    )
+    .join("");
+}
+
+// =============================================================================
 // Initialize
 // =============================================================================
 document.addEventListener("DOMContentLoaded", () => {
   initDaysSelector();
+  initCustomViewsSection();
   createCalendar();
-  log("Calendar initialized");
+  log("Calendar initialized with custom views");
+  log(
+    `Registered views: ${viewRegistry
+      .getAll()
+      .map((v) => v.type)
+      .join(", ")}`,
+  );
 });
