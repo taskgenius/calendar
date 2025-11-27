@@ -60,6 +60,7 @@ export class TimeView<T = unknown> extends BaseView<T> {
       this.context.config.theme,
       this.context.config.dateFormats,
       this.context.config.onStyleEvent,
+      this.context.config.onRenderEvent,
     );
   }
 

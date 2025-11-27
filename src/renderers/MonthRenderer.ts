@@ -11,6 +11,7 @@ import type {
   DayFilterResult,
   DayRenderConfig,
   VisibleDay,
+  EventRenderContext,
 } from "../types";
 import type { MonthEngine } from "../engines/MonthEngine";
 import type { DragController } from "../core/DragController";
@@ -52,6 +53,7 @@ export class MonthRenderer<T> {
       anchorEl: HTMLElement,
       defaultRender: () => void,
     ) => void,
+    private onRenderEvent?: (ctx: EventRenderContext) => void,
   ) {}
 
   /**
@@ -234,9 +236,30 @@ export class MonthRenderer<T> {
     // Rows will grow beyond this if container has extra space (flex: 1)
     row.style.setProperty("--tg-row-min-height", `${minHeight}px`);
 
+    // Pre-parse event times and group by date for O(1) lookup in renderDateCell
+    // This avoids O(days * events) parsing overhead
+    const eventsByDateStr: Map<string, CalendarEvent[]> = new Map();
+    for (const event of events) {
+      const eventStart = this.adapter.parse(event.start);
+      const eventEnd = this.adapter.parse(event.end);
+      // Check which days in this week the event covers
+      for (const day of weekDays) {
+        if (
+          !this.adapter.isBefore(eventEnd, day.date) &&
+          !this.adapter.isAfter(eventStart, day.date)
+        ) {
+          if (!eventsByDateStr.has(day.dateStr)) {
+            eventsByDateStr.set(day.dateStr, []);
+          }
+          eventsByDateStr.get(day.dateStr)!.push(event);
+        }
+      }
+    }
+
     // Render date cells
     for (const day of weekDays) {
-      const cell = this.renderDateCell(day, currentDate, events, dayFilter);
+      const dayEvents = eventsByDateStr.get(day.dateStr) || [];
+      const cell = this.renderDateCell(day, currentDate, dayEvents, dayFilter);
       row.appendChild(cell);
     }
 
@@ -268,10 +291,17 @@ export class MonthRenderer<T> {
     return row;
   }
 
+  /**
+   * Render a single date cell
+   * @param day - Day information
+   * @param currentDate - Current date for month comparison
+   * @param dayEvents - Pre-filtered events for this day (already parsed and filtered in renderWeekRow)
+   * @param dayFilter - Optional day filter function
+   */
   private renderDateCell(
     day: { date: T; dateStr: string },
     currentDate: T,
-    events: CalendarEvent[],
+    dayEvents: CalendarEvent[],
     dayFilter?: (date: T, context: DayFilterContext) => DayFilterResult,
   ): HTMLElement {
     const cell = createElement("div", "tg-month-cell");
@@ -330,17 +360,8 @@ export class MonthRenderer<T> {
 
     cell.appendChild(dateNum);
 
-    // Filter events for this day
-    const dayEvents = events.filter((e) => {
-      const eventStart = this.adapter.parse(e.start);
-      const eventEnd = this.adapter.parse(e.end);
-      return (
-        !this.adapter.isBefore(eventEnd, day.date) &&
-        !this.adapter.isAfter(eventStart, day.date)
-      );
-    });
-
     // Show event count badge if enabled
+    // Events are pre-filtered by renderWeekRow for performance
     // Styles applied via CSS class, theme color via CSS variable --tg-primary-color
     if (this.showEventCounts && dayEvents.length > 0) {
       const badge = createElement("div", "tg-event-count-badge");
@@ -378,7 +399,6 @@ export class MonthRenderer<T> {
     onEventClick?: (event: CalendarEvent) => void,
   ): HTMLElement {
     const el = createElement("div", "tg-event-base tg-event-bar");
-    el.textContent = item.event.title;
     el.dataset["eid"] = item.event.id;
 
     // Add segmentation data attributes and classes for styling
@@ -433,6 +453,34 @@ export class MonthRenderer<T> {
 
     if (customOpacity !== undefined) {
       el.style.opacity = customOpacity.toString();
+    }
+
+    // Default render function for event content
+    const defaultRender = () => {
+      el.textContent = item.event.title;
+    };
+
+    // Use custom render hook if provided, otherwise use default
+    if (this.onRenderEvent) {
+      const ctx: EventRenderContext = {
+        event: item.event,
+        el,
+        viewType: "month",
+        isAllDay: true, // Month view events are always rendered as all-day spans
+        isStart: item.isStart,
+        isEnd: item.isEnd,
+        defaultRender,
+      };
+      // Only add segment properties if they exist
+      if (item.segmentIndex !== undefined) {
+        ctx.segmentIndex = item.segmentIndex;
+      }
+      if (item.totalSegments !== undefined) {
+        ctx.totalSegments = item.totalSegments;
+      }
+      this.onRenderEvent(ctx);
+    } else {
+      defaultRender();
     }
 
     // Add resize handles
@@ -549,15 +597,37 @@ export class MonthRenderer<T> {
     for (const event of events) {
       const item = createElement("div", "tg-more-popover-item");
 
+      // Apply custom styling if hook is provided
+      let dotColor = event.color || "#3b82f6";
+      let customOpacity: number | undefined;
+
+      if (this.onStyleEvent) {
+        const style = this.onStyleEvent(event);
+        if (style.className) {
+          item.classList.add(style.className);
+        }
+        if (style.color) {
+          dotColor = style.color;
+        }
+        if (style.opacity !== undefined) {
+          customOpacity = style.opacity;
+        }
+      }
+
       // Color indicator
       const colorDot = createElement("span", "tg-more-popover-dot");
-      colorDot.style.backgroundColor = event.color || "#3b82f6";
+      colorDot.style.backgroundColor = dotColor;
       item.appendChild(colorDot);
 
       // Title
       const title = createElement("span", "tg-more-popover-title");
       title.textContent = event.title;
       item.appendChild(title);
+
+      // Apply opacity to the whole item if specified
+      if (customOpacity !== undefined) {
+        item.style.opacity = customOpacity.toString();
+      }
 
       // Click handler
       if (onEventClick) {

@@ -4,7 +4,11 @@
  * Extends BaseView and wraps the existing MonthRenderer
  * for backward compatibility while supporting the new view system.
  */
-import type { CalendarEvent, DayFilterContext, DayFilterResult } from "../types";
+import type {
+  CalendarEvent,
+  DayFilterContext,
+  DayFilterResult,
+} from "../types";
 import { BaseView, type ViewMeta, type ViewRenderOptions } from "./BaseView";
 import { MonthEngine } from "../engines/MonthEngine";
 import { MonthRenderer } from "../renderers/MonthRenderer";
@@ -55,6 +59,7 @@ export class MonthView<T = unknown> extends BaseView<T> {
       this.context.config.onStyleEvent,
       this.context.config.view.maxEventsPerRow,
       this.context.config.onRenderMoreEventsPopover,
+      this.context.config.onRenderEvent,
     );
   }
 

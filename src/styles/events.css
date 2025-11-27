@@ -194,3 +194,79 @@
 .tg-allday-event:active {
     cursor: grabbing;
 }
+
+/* =============================================================================
+   Cross-Midnight Event Styles (Time view)
+   Events that span multiple days show as segmented blocks
+   ============================================================================= */
+
+/* Base styling for segmented events */
+.tg-event-block.tg-event-segmented {
+    /* Visual indicator that this is part of a multi-day event */
+}
+
+/* First segment: event start - has rounded top corners */
+.tg-event-block.tg-event-segment-first {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    border-bottom: 2px dashed rgba(255, 255, 255, 0.5);
+}
+
+/* Last segment: event end - has rounded bottom corners */
+.tg-event-block.tg-event-segment-last {
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+    border-top: 2px dashed rgba(255, 255, 255, 0.5);
+}
+
+/* Middle segments: no rounded corners */
+.tg-event-block.tg-event-segment-middle {
+    border-radius: 0;
+    border-top: 2px dashed rgba(255, 255, 255, 0.5);
+    border-bottom: 2px dashed rgba(255, 255, 255, 0.5);
+}
+
+/* Continuation indicator: event continues from previous day */
+.tg-event-block.tg-event-continuation {
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+}
+
+/* Continued indicator: event continues to next day */
+.tg-event-block.tg-event-continued {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+/* Combined: middle segment (continuation + continued) */
+.tg-event-block.tg-event-continuation.tg-event-continued {
+    border-radius: 0;
+}
+
+/* Visual enhancement: subtle indicator for cross-midnight events */
+.tg-event-block.tg-event-continuation::before,
+.tg-event-block.tg-event-continued::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    opacity: 0.7;
+}
+
+/* Top arrow indicator for continuation from previous day */
+.tg-event-block.tg-event-continuation::before {
+    top: 0;
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-top: 6px solid rgba(255, 255, 255, 0.6);
+}
+
+/* Bottom arrow indicator for continuation to next day */
+.tg-event-block.tg-event-continued::after {
+    bottom: 0;
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-bottom: 6px solid rgba(255, 255, 255, 0.6);
+}

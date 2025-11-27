@@ -14,6 +14,7 @@ import type {
   TimeFilterResult,
   TimeFormatter,
   AllDayLayoutItem,
+  EventRenderContext,
 } from "../types";
 import type { TimeEngine } from "../engines/TimeEngine";
 import type { DragController } from "../core/DragController";
@@ -23,6 +24,9 @@ import { createElement, clearElement } from "../utils/dom";
  * Renders the week/day time view calendar
  */
 export class TimeRenderer<T> {
+  /** Current view type being rendered (updated on each render call) */
+  private currentViewType: ViewType = "week";
+
   constructor(
     private engine: TimeEngine<T>,
     private adapter: DateAdapter<T>,
@@ -33,6 +37,7 @@ export class TimeRenderer<T> {
     private onStyleEvent?: (
       event: CalendarEvent,
     ) => import("../types").EventStyle,
+    private onRenderEvent?: (ctx: EventRenderContext) => void,
   ) {}
 
   /**
@@ -51,6 +56,9 @@ export class TimeRenderer<T> {
     timeFilter?: (hour: number) => TimeFilterResult,
     timeFormatter?: TimeFormatter,
   ): void {
+    // Store current view type for use in event rendering hooks
+    this.currentViewType = viewType;
+
     clearElement(container);
 
     // Generate columns with dayFilter
@@ -309,8 +317,34 @@ export class TimeRenderer<T> {
       el.style.opacity = customOpacity.toString();
     }
 
-    // Title only (no time text for all-day events)
-    el.textContent = item.event.title;
+    // Default render function for event content
+    const defaultRender = () => {
+      // Title only (no time text for all-day events)
+      el.textContent = item.event.title;
+    };
+
+    // Use custom render hook if provided, otherwise use default
+    if (this.onRenderEvent) {
+      const ctx: EventRenderContext = {
+        event: item.event,
+        el,
+        viewType: this.currentViewType,
+        isAllDay: true,
+        isStart: item.isStart,
+        isEnd: item.isEnd,
+        defaultRender,
+      };
+      // Only add segment properties if they exist
+      if (item.segmentIndex !== undefined) {
+        ctx.segmentIndex = item.segmentIndex;
+      }
+      if (item.totalSegments !== undefined) {
+        ctx.totalSegments = item.totalSegments;
+      }
+      this.onRenderEvent(ctx);
+    } else {
+      defaultRender();
+    }
 
     // Add resize handles for spanning events
     if (item.isStart) {
@@ -425,6 +459,32 @@ export class TimeRenderer<T> {
     const el = createElement("div", "tg-event-base tg-event-block");
     el.dataset["eid"] = item.event.id;
 
+    // Add cross-midnight segment classes for visual styling
+    if (item.segmentIndex !== undefined && item.totalSegments !== undefined) {
+      el.dataset["segmentIndex"] = String(item.segmentIndex);
+      el.dataset["totalSegments"] = String(item.totalSegments);
+      el.classList.add("tg-event-segmented");
+
+      // Add specific classes for first/last/middle segments
+      if (item.segmentIndex === 0) {
+        el.classList.add("tg-event-segment-first");
+      }
+      if (item.segmentIndex === item.totalSegments - 1) {
+        el.classList.add("tg-event-segment-last");
+      }
+      if (item.segmentIndex > 0 && item.segmentIndex < item.totalSegments - 1) {
+        el.classList.add("tg-event-segment-middle");
+      }
+    }
+
+    // Add continuation classes for cross-midnight events
+    if (!item.isStart) {
+      el.classList.add("tg-event-continuation");
+    }
+    if (!item.isEnd) {
+      el.classList.add("tg-event-continued");
+    }
+
     // Apply custom styling if hook is provided
     let bgColor = item.event.color || "#3b82f6";
     let customOpacity: number | undefined;
@@ -456,34 +516,85 @@ export class TimeRenderer<T> {
     // Check if this is an all-day event
     const isAllDay = this.engine.isAllDayEvent(item.event);
 
-    // Create content - hide time text for all-day events
-    if (!isAllDay) {
-      const startDate = this.adapter.parse(item.event.start);
-      const endDate = this.adapter.parse(item.event.end);
-      const startTime = this.adapter.format(startDate, this.dateFormats.time);
-      const endTime = this.adapter.format(endDate, this.dateFormats.time);
+    // Parse time values for context
+    const startDate = this.adapter.parse(item.event.start);
+    const endDate = this.adapter.parse(item.event.end);
+    const startTime = this.adapter.format(startDate, this.dateFormats.time);
+    const endTime = this.adapter.format(endDate, this.dateFormats.time);
 
-      const timeText = createElement("div", "tg-time-text");
-      timeText.textContent = `${startTime} - ${endTime}`;
-      el.appendChild(timeText);
+    // Default render function for event content
+    const defaultRender = () => {
+      // Create content - hide time text for all-day events
+      if (!isAllDay) {
+        const timeText = createElement("div", "tg-time-text");
+        // For cross-midnight segments, show appropriate time info
+        if (item.isStart && item.isEnd) {
+          // Single-day event: show full time range
+          timeText.textContent = `${startTime} - ${endTime}`;
+        } else if (item.isStart) {
+          // First segment: show start time with continuation indicator
+          timeText.textContent = `${startTime} →`;
+        } else if (item.isEnd) {
+          // Last segment: show continuation with end time
+          timeText.textContent = `→ ${endTime}`;
+        } else {
+          // Middle segment: show continuation
+          timeText.textContent = `→ →`;
+        }
+        el.appendChild(timeText);
+      }
+
+      const titleText = createElement("div", "tg-event-title");
+      titleText.textContent = item.event.title;
+      el.appendChild(titleText);
+    };
+
+    // Use custom render hook if provided, otherwise use default
+    if (this.onRenderEvent) {
+      const ctx: EventRenderContext = {
+        event: item.event,
+        el,
+        viewType: this.currentViewType,
+        isAllDay,
+        isStart: item.isStart,
+        isEnd: item.isEnd,
+        defaultRender,
+      };
+      // Only add time properties for timed events
+      if (!isAllDay) {
+        ctx.startTime = startTime;
+        ctx.endTime = endTime;
+      }
+      // Add segment info for cross-midnight events
+      if (item.segmentIndex !== undefined) {
+        ctx.segmentIndex = item.segmentIndex;
+      }
+      if (item.totalSegments !== undefined) {
+        ctx.totalSegments = item.totalSegments;
+      }
+      this.onRenderEvent(ctx);
+    } else {
+      defaultRender();
     }
 
-    const titleText = createElement("div", "tg-event-title");
-    titleText.textContent = item.event.title;
-    el.appendChild(titleText);
+    // Add resize handles based on segment position
+    // Only add top handle if this is the event start
+    if (item.isStart) {
+      const resizeHandleTop = createElement(
+        "div",
+        "tg-resize-handle tg-resize-v tg-top",
+      );
+      el.appendChild(resizeHandleTop);
+    }
 
-    // Add resize handles (top and bottom)
-    const resizeHandleTop = createElement(
-      "div",
-      "tg-resize-handle tg-resize-v tg-top",
-    );
-    el.appendChild(resizeHandleTop);
-
-    const resizeHandleBottom = createElement(
-      "div",
-      "tg-resize-handle tg-resize-v tg-bottom",
-    );
-    el.appendChild(resizeHandleBottom);
+    // Only add bottom handle if this is the event end
+    if (item.isEnd) {
+      const resizeHandleBottom = createElement(
+        "div",
+        "tg-resize-handle tg-resize-v tg-bottom",
+      );
+      el.appendChild(resizeHandleBottom);
+    }
 
     // Event click handler
     if (onEventClick) {
