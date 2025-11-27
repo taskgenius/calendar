@@ -5,6 +5,41 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.12.1]
+
+### 🐛 Bug Fixes
+
+- **Multi-day event drag preservation**: Fixed issue where multi-day events lost their duration when dragged
+  - `clickOffsetDays` now correctly applied with bounds clamping to prevent negative or out-of-range values
+  - Duration calculation uses date-only comparison for accurate day span calculation
+  - Original time components preserved when dragging timed multi-day events
+
+- **Cross-midnight event handling**: Fixed drag behavior for events spanning midnight (e.g., 22:00 - 02:00 next day)
+  - Correct duration calculation that accounts for time-based day boundaries
+  - Proper edge case handling in resize operations to prevent inverted date ranges
+
+- **JSDOM compatibility**: Added `resolveCellWidth()` helper method in DragController
+  - Fallback chain: `offsetWidth` → `getBoundingClientRect().width` → `getComputedStyle().width`
+  - Ensures reliable cell width calculation in test environments
+
+### ✨ Features
+
+- **Demo events tab**: Added Events tab to config panel in demo page
+  - View current calendar events as formatted JSON
+  - Auto-updates on event add/clear operations
+  - Copy events to clipboard functionality
+
+### 🧪 Testing
+
+- Fix ghost position test selectors to use `data-date` attribute for reliable row selection
+- Add comprehensive multi-day drag integration tests (`Calendar.multiDayDrag.test.ts`):
+  - Test duration preservation with `clickOffsetDays = 0`
+  - Test middle-click offset handling (`clickOffsetDays > 0`)
+  - Test time component preservation for timed events
+  - Test `handleMonthMove` with DOM simulation
+  - Test cross-row drag maintaining event duration
+  - Test cross-midnight event drag behavior
+
 ## [0.12.0]
 
 ### ✨ Features
@@ -581,7 +616,8 @@ new Calendar('#app', {
 - Lightweight (<12KB gzipped)
 - SOLID architecture
 
-[Unreleased]: https://github.com/taskgenius/calendar/compare/v0.12.0...HEAD
+[Unreleased]: https://github.com/taskgenius/calendar/compare/v0.12.1...HEAD
+[0.12.1]: https://github.com/taskgenius/calendar/compare/v0.12.0...v0.12.1
 [0.12.0]: https://github.com/taskgenius/calendar/compare/v0.11.1...v0.12.0
 [0.11.1]: https://github.com/taskgenius/calendar/compare/v0.11.0...v0.11.1
 [0.11.0]: https://github.com/taskgenius/calendar/compare/v0.10.0...v0.11.0
