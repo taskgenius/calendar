@@ -20,6 +20,17 @@ export class DragController<T> {
   private boundOnMove: (e: MouseEvent) => void;
   private boundOnUp: (e: MouseEvent) => void;
 
+  /**
+   * Get the column count from a container's --tg-allday-columns CSS variable.
+   * Uses getComputedStyle to read both inline and stylesheet values (DRY helper).
+   */
+  private getAllDayColumnCount(container: HTMLElement): number {
+    const columnsVar = getComputedStyle(container).getPropertyValue(
+      "--tg-allday-columns",
+    );
+    return parseInt(columnsVar, 10) || 7;
+  }
+
   constructor(
     private adapter: DateAdapter<T>,
     private config: Required<DraggableConfig>,
@@ -70,11 +81,8 @@ export class DragController<T> {
         cellW = row.offsetWidth / 7;
         columnCount = 7;
       } else if (allDayContainer) {
-        // All-day section in time view
-        const columnsVar = allDayContainer.style.getPropertyValue(
-          "--tg-allday-columns",
-        );
-        columnCount = parseInt(columnsVar, 10) || 7;
+        // All-day section in time view - use getComputedStyle for stylesheet values
+        columnCount = this.getAllDayColumnCount(allDayContainer);
         cellW = allDayContainer.offsetWidth / columnCount;
       } else {
         return;
@@ -259,10 +267,12 @@ export class DragController<T> {
     let hoverDate: T;
 
     if (row?.dataset["date"]) {
-      // Month view row
+      // Month view row - recalculate cellW from current container width
       const rowStart = this.adapter.parse(row.dataset["date"]);
+      const rowRect = row.getBoundingClientRect();
+      const currentCellW = rowRect.width / 7;
       const cellIdx = Math.floor(
-        (e.clientX - row.getBoundingClientRect().left) / (s.cellW || 1),
+        (e.clientX - rowRect.left) / (currentCellW || 1),
       );
       hoverDate = this.adapter.add(
         rowStart,
@@ -272,34 +282,28 @@ export class DragController<T> {
     } else if (allDayContainer) {
       // All-day section - find which column we're over
       const rect = allDayContainer.getBoundingClientRect();
-      const columnsVar = allDayContainer.style.getPropertyValue(
-        "--tg-allday-columns",
-      );
-      const columnCount = parseInt(columnsVar, 10) || 7;
+      // Use getComputedStyle helper for stylesheet-defined values (DRY)
+      const columnCount = this.getAllDayColumnCount(allDayContainer);
       const colWidth = rect.width / columnCount;
       const colIdx = Math.floor((e.clientX - rect.left) / colWidth);
 
-      // Find the header to get date info
-      const header = allDayContainer
-        .closest(".tg-time-view, .tg-calendar")
-        ?.querySelector(".tg-time-header");
-      const headerCells = header?.querySelectorAll(".tg-time-header-cell");
+      // Scope lookup to the current calendar container (SRP - avoid cross-calendar coupling)
+      const calendarContainer = allDayContainer.closest(
+        ".tg-time-view, .tg-calendar",
+      );
+      if (!calendarContainer) return;
 
-      if (headerCells && headerCells.length > 0) {
-        // Get base date from the first day column
-        const dayColumn = document.querySelector(
-          ".tg-day-column[data-date]",
-        ) as HTMLElement | null;
-        if (dayColumn?.dataset["date"]) {
-          const baseDate = this.adapter.parse(dayColumn.dataset["date"]);
-          hoverDate = this.adapter.add(
-            baseDate,
-            Math.max(0, Math.min(columnCount - 1, colIdx)),
-            "day",
-          );
-        } else {
-          return;
-        }
+      // Get base date from the first day column within THIS calendar instance
+      const dayColumn = calendarContainer.querySelector(
+        ".tg-day-column[data-date]",
+      ) as HTMLElement | null;
+      if (dayColumn?.dataset["date"]) {
+        const baseDate = this.adapter.parse(dayColumn.dataset["date"]);
+        hoverDate = this.adapter.add(
+          baseDate,
+          Math.max(0, Math.min(columnCount - 1, colIdx)),
+          "day",
+        );
       } else {
         return;
       }
@@ -403,14 +407,13 @@ export class DragController<T> {
       }
     } else if (s.mode === "resize-top") {
       // Resize top: adjust start time, keep end time unchanged
+      newEnd = s.endDate;
+
       if (this.config.dateOnly) {
         // Date-only mode: only adjust date, keep original time
         const daysDiff = this.adapter.diff(newDateBase, s.startDate, "day");
         newStart = this.adapter.add(s.startDate, daysDiff, "day");
-        newEnd = s.endDate;
       } else {
-        newEnd = s.endDate;
-
         if (this.adapter.isSame(newDateBase, s.endDate, "day")) {
           // Same day: ensure start time is before end time with minimum 15 minutes
           const endMin =
@@ -427,6 +430,12 @@ export class DragController<T> {
             snappedMins,
           );
         }
+      }
+
+      // Clamp newStart to not exceed newEnd (LSP/time invariant: start <= end)
+      // Prevents inverted dates when dragging top handle past end time
+      if (this.adapter.isAfter(newStart, newEnd)) {
+        newStart = newEnd;
       }
     } else {
       // resize-bottom
@@ -463,12 +472,15 @@ export class DragController<T> {
     const rows = querySelectorAll<HTMLElement>(".tg-month-row");
 
     if (rows.length > 0) {
-      // Month view ghost rendering
+      // Month view ghost rendering - use dynamic column width calculation
+      const columnCount = 7;
+      const colWidth = 100 / columnCount;
+
       for (const row of rows) {
         if (!row.dataset["date"]) continue;
 
         const rStart = this.adapter.parse(row.dataset["date"]);
-        const rEnd = this.adapter.add(rStart, 6, "day");
+        const rEnd = this.adapter.add(rStart, columnCount - 1, "day");
 
         // Check if event overlaps this row
         if (
@@ -478,14 +490,42 @@ export class DragController<T> {
           const dStart = this.adapter.isBefore(start, rStart) ? rStart : start;
           const dEnd = this.adapter.isAfter(end, rEnd) ? rEnd : end;
 
-          const left = this.adapter.diff(dStart, rStart, "day") * 14.2857;
-          const width = (this.adapter.diff(dEnd, dStart, "day") + 1) * 14.2857;
+          const startIdx = this.adapter.diff(dStart, rStart, "day");
+          const span = this.adapter.diff(dEnd, dStart, "day") + 1;
+
+          const left = startIdx * colWidth;
+          const width = span * colWidth;
+          const ghostEndIdx = startIdx + span - 1;
+
+          // Calculate top position based on events that overlap with ghost's column range
+          // Only consider events whose columns intersect with the ghost's columns
+          const eventBars = row.querySelectorAll<HTMLElement>(".tg-event-bar");
+          let maxTop = 26; // Base offset for date numbers
+          for (const bar of eventBars) {
+            // Parse the bar's left percentage to determine its start column
+            const barLeftMatch = bar.style.left.match(/calc\(\s*([\d.]+)%/);
+            const barWidthMatch = bar.style.width.match(/calc\(\s*([\d.]+)%/);
+            if (!barLeftMatch?.[1] || !barWidthMatch?.[1]) continue;
+
+            const barLeftPct = parseFloat(barLeftMatch[1]);
+            const barWidthPct = parseFloat(barWidthMatch[1]);
+            const barStartIdx = Math.round(barLeftPct / colWidth);
+            const barSpan = Math.round(barWidthPct / colWidth);
+            const barEndIdx = barStartIdx + barSpan - 1;
+
+            // Check if this event overlaps with the ghost's column range
+            if (barStartIdx <= ghostEndIdx && barEndIdx >= startIdx) {
+              const barTop = parseFloat(bar.style.top) || 0;
+              const barHeight = bar.offsetHeight || 26;
+              maxTop = Math.max(maxTop, barTop + barHeight);
+            }
+          }
 
           const ghost = createElement("div", "tg-ghost-event");
           setStyles(ghost, {
-            left: `${left}%`,
-            width: `${width}%`,
-            top: "30px",
+            left: `calc(${left}% + 2px)`,
+            width: `calc(${width}% - 4px)`,
+            top: `${maxTop + 2}px`,
             height: "26px",
           });
 
@@ -500,14 +540,20 @@ export class DragController<T> {
 
       if (!allDayContainer) return;
 
-      const columnsVar = allDayContainer.style.getPropertyValue(
-        "--tg-allday-columns",
-      );
-      const columnCount = parseInt(columnsVar, 10) || 7;
+      // Use getComputedStyle helper for stylesheet-defined values (DRY)
+      const columnCount = this.getAllDayColumnCount(allDayContainer);
 
-      // Get first day column to determine date range
-      const dayColumns = querySelectorAll<HTMLElement>(
-        ".tg-day-column[data-date]",
+      // Scope lookup to the current calendar container (SRP - avoid cross-calendar coupling)
+      const calendarContainer = allDayContainer.closest(
+        ".tg-time-view, .tg-calendar",
+      );
+      if (!calendarContainer) return;
+
+      // Get day columns within THIS calendar instance
+      const dayColumns = Array.from(
+        calendarContainer.querySelectorAll<HTMLElement>(
+          ".tg-day-column[data-date]",
+        ),
       );
       if (dayColumns.length === 0) return;
 
@@ -534,12 +580,37 @@ export class DragController<T> {
         const colWidth = 100 / columnCount;
         const left = startIdx * colWidth;
         const width = span * colWidth;
+        const ghostEndIdx = startIdx + span - 1;
+
+        // Calculate top position based on events that overlap with ghost's column range
+        const eventBars =
+          allDayContainer.querySelectorAll<HTMLElement>(".tg-event-bar");
+        let maxTop = 0;
+        for (const bar of eventBars) {
+          // Parse the bar's left percentage to determine its start column
+          const barLeftMatch = bar.style.left.match(/calc\(\s*([\d.]+)%/);
+          const barWidthMatch = bar.style.width.match(/calc\(\s*([\d.]+)%/);
+          if (!barLeftMatch?.[1] || !barWidthMatch?.[1]) continue;
+
+          const barLeftPct = parseFloat(barLeftMatch[1]);
+          const barWidthPct = parseFloat(barWidthMatch[1]);
+          const barStartIdx = Math.round(barLeftPct / colWidth);
+          const barSpan = Math.round(barWidthPct / colWidth);
+          const barEndIdx = barStartIdx + barSpan - 1;
+
+          // Check if this event overlaps with the ghost's column range
+          if (barStartIdx <= ghostEndIdx && barEndIdx >= startIdx) {
+            const barTop = parseFloat(bar.style.top) || 0;
+            const barHeight = bar.offsetHeight || 22;
+            maxTop = Math.max(maxTop, barTop + barHeight);
+          }
+        }
 
         const ghost = createElement("div", "tg-ghost-event");
         setStyles(ghost, {
           left: `calc(${left}% + 2px)`,
           width: `calc(${width}% - 4px)`,
-          top: "4px",
+          top: `${maxTop + 4}px`,
           height: "22px",
         });
 
