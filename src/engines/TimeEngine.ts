@@ -28,6 +28,14 @@ interface EventGeometry {
   colIndex: number;
   widthPercent: number;
   leftPercent: number;
+  /** Whether this segment is the start of the original event */
+  isStart: boolean;
+  /** Whether this segment is the end of the original event */
+  isEnd: boolean;
+  /** Segment index for cross-midnight events (0-based) */
+  segmentIndex?: number;
+  /** Total segments for cross-midnight events */
+  totalSegments?: number;
 }
 
 /**
@@ -170,13 +178,15 @@ export class TimeEngine<T> {
   /**
    * Calculate layout for events on a specific day
    * Handles overlapping events using a column packing algorithm
+   * Supports both single-day events and cross-midnight event segments
    *
    * @param events - All calendar events
    * @param dateStr - Target date string (YYYY-MM-DD)
    * @returns Array of TimeLayoutItem with positioning information
    */
   calculateLayout(events: CalendarEvent[], dateStr: string): TimeLayoutItem[] {
-    // Step 1: Filter and calculate geometry for single-day events on this date
+    // Step 1: Filter and calculate geometry for events on this date
+    // Now includes cross-midnight events that span this day
     const dayEvents = this.filterAndCalculateGeometry(events, dateStr);
 
     if (dayEvents.length === 0) {
@@ -194,17 +204,29 @@ export class TimeEngine<T> {
       this.calculateColumnPositions(group);
     }
 
-    // Step 5: Convert to TimeLayoutItem
-    return dayEvents.map((ev) => ({
-      event: ev.event,
-      top: ev.top,
-      height: ev.height,
-      leftPercent: ev.leftPercent,
-      widthPercent: ev.widthPercent,
-      colIndex: ev.colIndex,
-      startMin: ev.startMin,
-      endMin: ev.endMin,
-    }));
+    // Step 5: Convert to TimeLayoutItem with segment info
+    return dayEvents.map((ev) => {
+      const item: TimeLayoutItem = {
+        event: ev.event,
+        top: ev.top,
+        height: ev.height,
+        leftPercent: ev.leftPercent,
+        widthPercent: ev.widthPercent,
+        colIndex: ev.colIndex,
+        startMin: ev.startMin,
+        endMin: ev.endMin,
+        isStart: ev.isStart,
+        isEnd: ev.isEnd,
+      };
+
+      // Add segment info only for cross-midnight events
+      if (ev.segmentIndex !== undefined && ev.totalSegments !== undefined) {
+        item.segmentIndex = ev.segmentIndex;
+        item.totalSegments = ev.totalSegments;
+      }
+
+      return item;
+    });
   }
 
   /**
@@ -217,6 +239,33 @@ export class TimeEngine<T> {
     const start = this.adapter.parse(event.start);
     const end = this.adapter.parse(event.end);
     return this.adapter.isSame(start, end, "day");
+  }
+
+  /**
+   * Check if a timed event crosses midnight (spans multiple days but is not all-day)
+   * These events need special handling in time view to show on each day they span.
+   *
+   * @param event - Calendar event
+   * @returns true if event crosses midnight and is not an all-day event
+   */
+  isCrossMidnightEvent(event: CalendarEvent): boolean {
+    // All-day events are handled separately
+    if (this.isAllDayEvent(event)) {
+      return false;
+    }
+    return !this.isSingleDayEvent(event);
+  }
+
+  /**
+   * Get the number of days an event spans
+   *
+   * @param event - Calendar event
+   * @returns Number of days (1 for single-day events)
+   */
+  getEventDaySpan(event: CalendarEvent): number {
+    const start = this.adapter.startOf(this.adapter.parse(event.start), "day");
+    const end = this.adapter.startOf(this.adapter.parse(event.end), "day");
+    return this.adapter.diff(end, start, "day") + 1;
   }
 
   /**
@@ -472,33 +521,89 @@ export class TimeEngine<T> {
 
   /**
    * Filter events for a specific date and calculate their geometry
+   * Supports both single-day events and cross-midnight events
+   *
+   * For cross-midnight events:
+   * - First day: shows from event start time to 23:59 (1440 minutes)
+   * - Middle days: shows full day (00:00 to 23:59)
+   * - Last day: shows from 00:00 to event end time
    */
   private filterAndCalculateGeometry(
     events: CalendarEvent[],
     dateStr: string,
   ): EventGeometry[] {
     const result: EventGeometry[] = [];
+    const targetDate = this.adapter.parse(dateStr);
+    const targetDayStart = this.adapter.startOf(targetDate, "day");
 
     for (const event of events) {
-      const start = this.adapter.parse(event.start);
-      const startDateStr = this.adapter.format(start, this.dateFormats.date);
-
-      // Only include single-day events on this date
-      if (startDateStr !== dateStr || !this.isSingleDayEvent(event)) {
+      // Skip all-day events (handled by calculateAllDayLayout)
+      if (this.isAllDayEvent(event)) {
         continue;
       }
 
-      const end = this.adapter.parse(event.end);
-      const startMin =
-        this.adapter.hour(start) * 60 + this.adapter.minute(start);
-      const duration = this.adapter.diff(end, start, "minute");
-      const endMin = startMin + duration;
+      const eventStart = this.adapter.parse(event.start);
+      const eventEnd = this.adapter.parse(event.end);
+      const eventStartDay = this.adapter.startOf(eventStart, "day");
+      const eventEndDay = this.adapter.startOf(eventEnd, "day");
+
+      // Check if this event touches the target date
+      const isOnTargetDate =
+        !this.adapter.isBefore(targetDayStart, eventStartDay, "day") &&
+        !this.adapter.isAfter(targetDayStart, eventEndDay, "day");
+
+      if (!isOnTargetDate) {
+        continue;
+      }
+
+      // Calculate segment info for cross-midnight events
+      const isStart = this.adapter.isSame(targetDayStart, eventStartDay, "day");
+      const isEnd = this.adapter.isSame(targetDayStart, eventEndDay, "day");
+      const totalDays =
+        this.adapter.diff(eventEndDay, eventStartDay, "day") + 1;
+      const segmentIndex = this.adapter.diff(
+        targetDayStart,
+        eventStartDay,
+        "day",
+      );
+
+      // Calculate start/end minutes for this day's segment
+      let startMin: number;
+      let endMin: number;
+
+      if (isStart && isEnd) {
+        // Single-day event: use actual times
+        startMin =
+          this.adapter.hour(eventStart) * 60 + this.adapter.minute(eventStart);
+        endMin =
+          this.adapter.hour(eventEnd) * 60 + this.adapter.minute(eventEnd);
+      } else if (isStart) {
+        // First day of multi-day: event start to end of day
+        startMin =
+          this.adapter.hour(eventStart) * 60 + this.adapter.minute(eventStart);
+        endMin = 24 * 60; // End of day (1440 minutes)
+      } else if (isEnd) {
+        // Last day of multi-day: start of day to event end
+        startMin = 0;
+        endMin =
+          this.adapter.hour(eventEnd) * 60 + this.adapter.minute(eventEnd);
+      } else {
+        // Middle day: full day
+        startMin = 0;
+        endMin = 24 * 60;
+      }
+
+      // Skip if segment has no duration (e.g., ends exactly at midnight)
+      if (endMin <= startMin) {
+        continue;
+      }
 
       const pixelsPerMinute = this.cellHeight / 60;
       const top = startMin * pixelsPerMinute;
-      const height = Math.max(20, duration * pixelsPerMinute); // Minimum height of 20px
+      const duration = endMin - startMin;
+      const height = Math.max(20, duration * pixelsPerMinute);
 
-      result.push({
+      const geometry: EventGeometry = {
         event,
         top,
         height,
@@ -507,7 +612,17 @@ export class TimeEngine<T> {
         colIndex: 0,
         widthPercent: 100,
         leftPercent: 0,
-      });
+        isStart,
+        isEnd,
+      };
+
+      // Add segment info only for multi-day events
+      if (totalDays > 1) {
+        geometry.segmentIndex = segmentIndex;
+        geometry.totalSegments = totalDays;
+      }
+
+      result.push(geometry);
     }
 
     return result;
