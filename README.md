@@ -9,21 +9,21 @@ Used in [taskgenius/taskgenius-plugin](https://github.com/taskgenius/taskgenius-
 
 A lightweight, configurable TypeScript calendar component library with drag-and-drop support.
 
-## ✨ Features
+## Features
 
-- 📅 **Three view modes** - Month, week, and day views
-- 🎨 **Fully configurable** - Themes, colors, and styles
-- 🔄 **Drag-and-drop** - Move and resize events (with date-only mode)
-- 🗓️ **Flexible week layout** - Configure first day of week, hide weekends
-- 🔢 **Event count badges** - Display event counts on date cells
-- 🎨 **Custom rendering hooks** - Full control over date cells and event styling
-- 📦 **Lightweight** - <12KB gzipped
-- 🔌 **Pluggable adapters** - Support for different date libraries
-- ⚡ **Zero dependencies** - Core with optional Day.js
-- 📝 **TypeScript first** - Complete type definitions
-- 🎯 **SOLID principles** - Clean, maintainable architecture
+- Three view modes - month, week, and day views with dedicated all-day lane
+- Extensible view system - register custom views or extend built-ins
+- Cross-midnight & multi-day support - timed/all-day events render and drag correctly across days
+- Drag-and-drop/resize - move or resize events with optional date-only mode
+- Flexible layout controls - first day of week, hide weekends, custom day/time filters
+- Overflow handling - event count badges plus configurable "+N more" popover renderer
+- Custom rendering hooks - date cells, event styling, event content, and popovers
+- Lightweight - <12KB gzipped with zero runtime deps
+- Pluggable adapters - Day.js by default, custom adapters supported
+- TypeScript first - complete type definitions and SOLID architecture
 
-## 📦 Installation
+
+## Installation
 
 ```bash
 npm install @taskgenius/calendar dayjs
@@ -104,18 +104,26 @@ const cal2 = new Calendar(element, { view: { type: 'week' } });
 
 | Method | Description |
 |--------|-------------|
-| `setView(type: ViewType)` | Switch between 'month', 'week', 'day' views |
+| `registerView(ViewClass, options?)` | Register a custom view (class must expose static `meta`) |
+| `unregisterView(type)` | Remove a registered view type |
+| `getRegisteredViews()` | Get metadata for all registered views |
+| `getViewRegistry()` | Access the view registry instance |
+| `hasView(type)` | Check whether a view type is registered |
+| `setView(type: ViewType \| string)` | Switch between registered views (built-in or custom) |
 | `getView()` | Get current view type |
+| `getActiveView()` | Get the active view instance |
 | `addEvent(event: CalendarEvent)` | Add a new event |
 | `removeEvent(id: string)` | Remove event by ID |
 | `updateEvent(id: string, updates: Partial<CalendarEvent>)` | Update event properties |
-| `getEvents()` | Get all events |
 | `setEvents(events: CalendarEvent[])` | Replace all events |
+| `getEvents()` | Get all events |
 | `next()` | Navigate to next period |
 | `prev()` | Navigate to previous period |
 | `today()` | Navigate to today |
 | `goToDate(date: string \| Date)` | Navigate to specific date |
-| `getCurrentDate()` | Get current displayed date |
+| `getCurrentDate()` | Get current displayed date (ISO string) |
+| `setDraggable(enabled: boolean)` | Enable or disable drag-and-drop at runtime |
+| `isDraggable()` | Check whether drag-and-drop is enabled |
 | `refresh()` | Force re-render |
 | `destroy()` | Cleanup and remove calendar |
 
@@ -127,37 +135,58 @@ interface CalendarConfig {
   events?: CalendarEvent[];
   draggable?: DraggableConfig;
   theme?: ThemeConfig;
-  dateFormats?: DateFormatConfig;  // Custom date display formats
-  showEventCounts?: boolean;       // Default: false - Show event count badges on date cells
+  dateAdapter?: DateAdapter<unknown>;  // Custom date adapter (default: Day.js)
+  dateFormats?: Partial<DateFormatConfig>;  // Custom date display formats (unicode tokens recommended)
+  headerFormat?: {                    // Deprecated: mapped to dateFormats
+    month?: string;
+    day?: string;
+  };
+  showEventCounts?: boolean;          // Default: false - Show event count badges on date cells
   
   // Event interactions
   onEventClick?: (event: CalendarEvent) => void;
   onEventDoubleClick?: (event: CalendarEvent) => void;
   onEventContextMenu?: (event: CalendarEvent, x: number, y: number) => void;
-  onEventDrop?: (event: CalendarEvent, newStart: Date, newEnd: Date) => void;  // v0.8.0+: Changed from string to Date
-  onEventResize?: (event: CalendarEvent, newStart: Date, newEnd: Date) => void;  // v0.9.0+: New callback for resize operations
+  onEventDrop?: (event: CalendarEvent, newStart: Date, newEnd: Date) => void;    // v0.8.0+: Date objects
+  onEventResize?: (event: CalendarEvent, newStart: Date, newEnd: Date) => void;  // v0.9.0+: Resize callback
   
   // View and navigation
   onViewChange?: (viewType: ViewType) => void;
-  onDateChange?: (date: Date) => void;  // v0.8.0+: Changed from string to Date
+  onDateChange?: (date: Date) => void;
   
   // Date cell interactions (month view)
-  onDateClick?: (date: Date) => void;              // v0.8.0+: Changed from string to Date
-  onDateDoubleClick?: (date: Date) => void;        // v0.8.0+: Changed from string to Date
-  onDateContextMenu?: (date: Date, x: number, y: number) => void;  // v0.8.0+: Changed from string to Date
+  onDateClick?: (date: Date) => void;
+  onDateDoubleClick?: (date: Date) => void;
+  onDateContextMenu?: (date: Date, x: number, y: number) => void;
   
   // Time slot interactions (week/day view)
-  onTimeSlotClick?: (dateTime: Date) => void;      // v0.8.0+: Changed from string to Date
-  onTimeSlotDoubleClick?: (dateTime: Date) => void;  // v0.8.0+: Changed from string to Date
-  onTimeSlotContextMenu?: (dateTime: Date, x: number, y: number) => void;  // v0.8.0+: Changed from string to Date
+  onTimeSlotClick?: (dateTime: Date) => void;
+  onTimeSlotDoubleClick?: (dateTime: Date) => void;
+  onTimeSlotContextMenu?: (dateTime: Date, x: number, y: number) => void;
   
   // Range selection (drag to select multiple cells)
-  onDateRangeSelect?: (startDate: Date, endDate: Date) => void;  // v0.8.0+: Changed from string to Date
-  onTimeRangeSelect?: (startDateTime: Date, endDateTime: Date) => void;  // v0.8.0+: Changed from string to Date
+  onDateRangeSelect?: (startDate: Date, endDate: Date) => void;
+  onTimeRangeSelect?: (startDateTime: Date, endDateTime: Date) => void;
   
   // Rendering hooks
-  onRenderDateCell?: (ctx: DateCellContext) => void;  // Custom date cell rendering
-  onStyleEvent?: (event: CalendarEvent) => EventStyle;  // Custom event styling
+  onRenderDateCell?: (ctx: DateCellContext) => void;      // Custom date cell rendering
+  onStyleEvent?: (event: CalendarEvent) => EventStyle;    // Custom event styling
+  onRenderEvent?: (ctx: EventRenderContext) => void;      // v0.12.0+: Custom event content
+  onRenderMoreEventsPopover?: (                          // v0.10.0+: Custom "+N more" popover renderer
+    events: CalendarEvent[],
+    date: Date,
+    anchorEl: HTMLElement,
+    defaultRender: () => void
+  ) => void;
+}
+```
+
+For custom view registries, the constructor also accepts:
+
+```typescript
+interface ExtendedCalendarConfig extends CalendarConfig {
+  viewRegistry?: ViewRegistry;       // Provide a custom registry
+  registerBuiltInViews?: boolean;    // Default: true - auto-register Month/Week/Day views
 }
 ```
 
@@ -165,13 +194,18 @@ interface CalendarConfig {
 
 ```typescript
 interface ViewConfig {
-  type: 'month' | 'week' | 'day';  // Default: 'week'
-  showDateHeader?: boolean;         // Default: true
-  showWeekNumbers?: boolean;        // Default: false
-  firstDayOfWeek?: 0 | 1 | 2 | 3 | 4 | 5 | 6;  // Default: 0 (Sunday)
-  showWeekends?: boolean;           // Default: true
+  type: 'month' | 'week' | 'day';   // Default: 'week'
+  showDateHeader?: boolean;          // Default: true (time views)
+  showWeekNumbers?: boolean;         // Default: false (month view)
+  firstDayOfWeek?: 0 | 1 | 2 | 3 | 4 | 5 | 6;  // Default: 0 (supports full 0-6 range)
+  showWeekends?: boolean;            // Default: true (false is converted to a dayFilter)
+  maxEventsPerRow?: number;          // Month view: cap events per row before showing "+N more"
+  dayFilter?: (date: unknown, ctx: DayFilterContext) => DayFilterResult; // Hide/customize days
+  timeFilter?: (hour: number) => TimeFilterResult;   // Hide/customize time slots
+  timeFormatter?: TimeFormatter;     // Custom time axis labels
 }
 ```
+`dayFilter`/`timeFilter` can return boolean or config objects (`DayRenderConfig` / `TimeSlotConfig`). Setting `DayRenderConfig.disabled` keeps the cell visible but hides events for that date.
 
 #### DraggableConfig
 
@@ -203,8 +237,8 @@ interface ThemeConfig {
 interface CalendarEvent {
   id: string;                        // Unique identifier
   title: string;                     // Display title
-  start: string;                     // ISO format: 'yyyy-MM-dd HH:mm'
-  end: string;                       // ISO format: 'yyyy-MM-dd HH:mm'
+  start: string;                     // ISO format: 'yyyy-MM-dd HH:mm' (supports cross-midnight spans)
+  end: string;                       // ISO format: 'yyyy-MM-dd HH:mm' (use 00:00/23:59 for all-day)
   color?: string;                    // CSS color value
   metadata?: Record<string, unknown>; // Custom data
 }
@@ -324,12 +358,41 @@ const calendar = new Calendar('#app', {
 });
 ```
 
+### Day/Time Filtering
+
+```typescript
+const calendar = new Calendar('#app', {
+  view: {
+    type: 'week',
+    firstDayOfWeek: 1,
+    dayFilter: (_date, ctx) => ctx.isWeekend ? { visible: false } : true, // Hide weekends with config
+    timeFilter: (hour) => hour >= 8 && hour < 18,  // Working hours only
+    timeFormatter: (hour) => `${hour}:00`          // Custom time axis labels
+  }
+});
+```
+
 ### Event Count Badges
 
 ```typescript
 const calendar = new Calendar('#app', {
   view: { type: 'month' },
   showEventCounts: true  // Display event count on each date cell
+});
+```
+
+### Month Overflow & "+N more" Popover (v0.10.0+)
+
+```typescript
+const calendar = new Calendar('#app', {
+  view: {
+    type: 'month',
+    maxEventsPerRow: 3
+  },
+  onRenderMoreEventsPopover: (events, date, anchorEl, defaultRender) => {
+    console.log('Hidden events on', date.toISOString(), events.length);
+    defaultRender(); // Or render a custom popover
+  }
 });
 ```
 
@@ -399,8 +462,8 @@ const calendar = new Calendar('#app', {
     date: 'yyyy/MM/dd',           // Default: 'yyyy-MM-dd'
     dateTime: 'yyyy/MM/dd HH:mm', // Default: 'yyyy-MM-dd HH:mm'
     time: 'HH:mm',                // Default: 'HH:mm'
-    monthHeader: 'MMMM yyyy',     // Default: 'yyyy年 M月'
-    dayHeader: 'MMMM d, yyyy'     // Default: 'yyyy年M月d日'
+    monthHeader: 'MMMM yyyy',     // Default: 'yyyy\u5e74M\u6708'
+    dayHeader: 'MMMM d, yyyy'     // Default: 'yyyy\u5e74M\u6708d\u65e5'
   }
 });
 ```
@@ -411,6 +474,7 @@ const calendar = new Calendar('#app', {
 - Day: `dd` (01-31), `d` (1-31)
 - Hour: `HH` (00-23), `H` (0-23)
 - Minute: `mm` (00-59), `m` (0-59)
+- Legacy `headerFormat` is deprecated; it maps to `dateFormats.monthHeader`/`dayHeader` for backward compatibility.
 
 ### Custom Date Cell Rendering
 
@@ -484,6 +548,23 @@ Add CSS for custom event classes (optional):
 .completed-event {
   text-decoration: line-through;
 }
+```
+
+### Custom Event Rendering (v0.12.0+)
+
+```typescript
+const calendar = new Calendar('#app', {
+  onRenderEvent: (ctx) => {
+    ctx.defaultRender(); // Keep default title/time rendering
+
+    if (ctx.event.metadata?.priority === 'high') {
+      const badge = document.createElement('span');
+      badge.className = 'priority-badge';
+      badge.textContent = '!';
+      ctx.el.appendChild(badge);
+    }
+  }
+});
 ```
 
 ## 🏗️ Architecture
