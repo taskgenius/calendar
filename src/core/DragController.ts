@@ -21,6 +21,21 @@ export class DragController<T> {
   private boundOnUp: (e: MouseEvent) => void;
 
   /**
+   * Safely compute cell width even when offsetWidth is 0 (e.g., JSDOM).
+   */
+  private resolveCellWidth(
+    container: HTMLElement,
+    columnCount: number,
+  ): number {
+    const rectWidth = container.getBoundingClientRect().width;
+    const computedWidth =
+      parseFloat(getComputedStyle(container).width || "0") || 0;
+    const baseWidth =
+      container.offsetWidth || rectWidth || computedWidth || columnCount || 1;
+    return baseWidth / Math.max(columnCount, 1);
+  }
+
+  /**
    * Get the column count from a container's --tg-allday-columns CSS variable.
    * Uses getComputedStyle to read both inline and stylesheet values (DRY helper).
    */
@@ -78,12 +93,12 @@ export class DragController<T> {
 
       if (row) {
         // Month view
-        cellW = row.offsetWidth / 7;
         columnCount = 7;
+        cellW = this.resolveCellWidth(row, columnCount);
       } else if (allDayContainer) {
         // All-day section in time view - use getComputedStyle for stylesheet values
         columnCount = this.getAllDayColumnCount(allDayContainer);
-        cellW = allDayContainer.offsetWidth / columnCount;
+        cellW = this.resolveCellWidth(allDayContainer, columnCount);
       } else {
         return;
       }
@@ -104,8 +119,15 @@ export class DragController<T> {
         endDate: this.adapter.parse(event.end),
         cellW,
         renderCallback,
-        clickOffsetDays: Math.floor(
-          (e.clientX - el.getBoundingClientRect().left) / cellW,
+        clickOffsetDays: Math.max(
+          0,
+          Math.min(
+            (columnCount || 7) - 1,
+            Math.floor(
+              (e.clientX - el.getBoundingClientRect().left) /
+                Math.max(cellW, 1),
+            ),
+          ),
         ),
       });
     };
@@ -315,17 +337,75 @@ export class DragController<T> {
     let newEnd = s.endDate;
 
     if (s.mode === "move") {
+      // Calculate duration in calendar days (date part only, ignoring time)
+      // This correctly handles cross-midnight events like 22:00 -> 02:00 next day
+      const startDateOnly = this.adapter.startOf(s.startDate, "day");
+      const endDateOnly = this.adapter.startOf(s.endDate, "day");
+      const duration = this.adapter.diff(endDateOnly, startDateOnly, "day");
+
+      // Adjust for click offset: if user clicked in the middle of a multi-day event,
+      // the new start should account for that offset to keep the event under the cursor
+      const clickOffset = s.clickOffsetDays || 0;
+      const adjustedHoverDate = this.adapter.add(
+        hoverDate,
+        -clickOffset,
+        "day",
+      );
+
+      // DEBUG: Log drag calculation details
+      console.log("[DragController] handleMonthMove - move mode:", {
+        eventTitle: s.event.title,
+        originalStart: this.adapter.format(s.startDate, "yyyy-MM-dd HH:mm"),
+        originalEnd: this.adapter.format(s.endDate, "yyyy-MM-dd HH:mm"),
+        startDateOnly: this.adapter.format(startDateOnly, "yyyy-MM-dd"),
+        endDateOnly: this.adapter.format(endDateOnly, "yyyy-MM-dd"),
+        duration,
+        clickOffset,
+        hoverDate: this.adapter.format(hoverDate, "yyyy-MM-dd HH:mm"),
+        adjustedHoverDate: this.adapter.format(
+          adjustedHoverDate,
+          "yyyy-MM-dd HH:mm",
+        ),
+        dateOnly: this.config.dateOnly,
+      });
+
       if (this.config.dateOnly) {
         // Date-only mode: calculate date difference and preserve time
-        const daysDiff = this.adapter.diff(hoverDate, s.startDate, "day");
+        const daysDiff = this.adapter.diff(
+          adjustedHoverDate,
+          startDateOnly,
+          "day",
+        );
         newStart = this.adapter.add(s.startDate, daysDiff, "day");
         newEnd = this.adapter.add(s.endDate, daysDiff, "day");
       } else {
-        // Normal mode: allow full datetime adjustment
-        const duration = this.adapter.diff(s.endDate, s.startDate, "day");
-        newStart = hoverDate;
-        newEnd = this.adapter.add(newStart, duration, "day");
+        // Normal mode: preserve original time while adjusting date
+        const originalStartHour = this.adapter.hour(s.startDate);
+        const originalStartMinute = this.adapter.minute(s.startDate);
+        const originalEndHour = this.adapter.hour(s.endDate);
+        const originalEndMinute = this.adapter.minute(s.endDate);
+
+        newStart = this.adapter.setMinute(
+          this.adapter.setHour(adjustedHoverDate, originalStartHour),
+          originalStartMinute,
+        );
+        newEnd = this.adapter.setMinute(
+          this.adapter.setHour(
+            this.adapter.add(adjustedHoverDate, duration, "day"),
+            originalEndHour,
+          ),
+          originalEndMinute,
+        );
       }
+
+      // DEBUG: Log calculated new dates
+      console.log(
+        "[DragController] handleMonthMove - calculated newStart/newEnd:",
+        {
+          newStart: this.adapter.format(newStart, "yyyy-MM-dd HH:mm"),
+          newEnd: this.adapter.format(newEnd, "yyyy-MM-dd HH:mm"),
+        },
+      );
     } else if (s.mode === "resize-right") {
       // Resize right: keep start unchanged, adjust end
       newStart = s.startDate;
@@ -337,6 +417,18 @@ export class DragController<T> {
           this.adapter.setHour(hoverDate, originalHour),
           originalMinute,
         );
+
+        // Handle cross-midnight events: if end time is before start time on same day,
+        // set end to end of day (23:59)
+        if (
+          this.adapter.isSame(newEnd, newStart, "day") &&
+          this.adapter.isBefore(newEnd, newStart)
+        ) {
+          newEnd = this.adapter.setMinute(
+            this.adapter.setHour(hoverDate, 23),
+            59,
+          );
+        }
       } else {
         newEnd = hoverDate;
       }
@@ -354,6 +446,18 @@ export class DragController<T> {
           this.adapter.setHour(hoverDate, originalHour),
           originalMinute,
         );
+
+        // Handle cross-midnight events: if start time is after end time on same day,
+        // set start to beginning of day (00:00)
+        if (
+          this.adapter.isSame(newStart, newEnd, "day") &&
+          this.adapter.isAfter(newStart, newEnd)
+        ) {
+          newStart = this.adapter.setMinute(
+            this.adapter.setHour(hoverDate, 0),
+            0,
+          );
+        }
       } else {
         newStart = hoverDate;
       }
@@ -676,6 +780,19 @@ export class DragController<T> {
       const newStart = this.toDate(s.tentativeStart);
       const newEnd = this.toDate(s.tentativeEnd);
 
+      // DEBUG: Log final dates being applied
+      console.log("[DragController] onUp - applying changes:", {
+        eventTitle: s.event.title,
+        mode: s.mode,
+        tentativeStart: this.adapter.format(
+          s.tentativeStart,
+          "yyyy-MM-dd HH:mm",
+        ),
+        tentativeEnd: this.adapter.format(s.tentativeEnd, "yyyy-MM-dd HH:mm"),
+        newStartDate: newStart.toISOString(),
+        newEndDate: newEnd.toISOString(),
+      });
+
       // Call appropriate callback based on operation type
       if (s.mode === "move") {
         this.onDrop(s.event, newStart, newEnd);
@@ -684,6 +801,9 @@ export class DragController<T> {
         this.onResize(s.event, newStart, newEnd);
       }
       s.renderCallback();
+    } else {
+      // DEBUG: Log when no tentative dates
+      console.log("[DragController] onUp - no tentative dates, drag cancelled");
     }
 
     this.state = null;

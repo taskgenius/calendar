@@ -650,6 +650,16 @@ export class Calendar<T = Dayjs> {
     newStart: Date,
     newEnd: Date,
   ): void {
+    // DEBUG: Log incoming event drop
+    console.log("[Calendar] handleEventDrop:", {
+      eventId: event.id,
+      eventTitle: event.title,
+      originalStart: event.start,
+      originalEnd: event.end,
+      newStart: newStart.toISOString(),
+      newEnd: newEnd.toISOString(),
+    });
+
     // IMPORTANT: Call the callback BEFORE updating internal state
     this.config.onEventDrop?.(event, newStart, newEnd);
 
@@ -662,6 +672,12 @@ export class Calendar<T = Dayjs> {
       this.adapter.create(newEnd),
       INTERNAL_DATA_FORMAT.dateTime,
     );
+
+    // DEBUG: Log formatted strings
+    console.log("[Calendar] handleEventDrop - updating to:", {
+      newStartStr,
+      newEndStr,
+    });
 
     this.eventManager.updateEvent(event.id, {
       start: newStartStr,

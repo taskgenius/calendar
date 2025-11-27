@@ -79,7 +79,10 @@ describe("Ghost element positioning during drag", () => {
 
       calendar.goToDate("2025-11-17");
 
-      const row = container.querySelector(".tg-month-row") as HTMLElement;
+      // Nov 17, 2025 is Monday - its week starts on Nov 16 (Sunday)
+      const row = container.querySelector(
+        '.tg-month-row[data-date="2025-11-16"]',
+      ) as HTMLElement;
       if (!row) return;
 
       // Mock a narrow container (350px)
@@ -149,7 +152,10 @@ describe("Ghost element positioning during drag", () => {
 
       calendar.goToDate("2025-11-17");
 
-      const row = container.querySelector(".tg-month-row") as HTMLElement;
+      // Nov 17, 2025 is Monday - its week starts on Nov 16 (Sunday)
+      const row = container.querySelector(
+        '.tg-month-row[data-date="2025-11-16"]',
+      ) as HTMLElement;
       if (!row) return;
 
       // First mock with wide container
@@ -228,7 +234,10 @@ describe("Ghost element positioning during drag", () => {
 
       calendar.goToDate("2025-11-16");
 
-      const row = container.querySelector(".tg-month-row") as HTMLElement;
+      // Nov 16, 2025 is Sunday - week starts on Nov 16
+      const row = container.querySelector(
+        '.tg-month-row[data-date="2025-11-16"]',
+      ) as HTMLElement;
       if (!row) return;
 
       mockRowRect(row, 700);
@@ -300,7 +309,10 @@ describe("Ghost element positioning during drag", () => {
 
       calendar.goToDate("2025-11-16");
 
-      const row = container.querySelector(".tg-month-row") as HTMLElement;
+      // Nov 16, 2025 is Sunday - week starts on Nov 16
+      const row = container.querySelector(
+        '.tg-month-row[data-date="2025-11-16"]',
+      ) as HTMLElement;
       if (!row) return;
 
       mockRowRect(row, 700);
@@ -382,7 +394,10 @@ describe("Ghost element positioning during drag", () => {
 
       calendar.goToDate("2025-11-16");
 
-      const row = container.querySelector(".tg-month-row") as HTMLElement;
+      // Nov 16, 2025 is Sunday - week starts on Nov 16
+      const row = container.querySelector(
+        '.tg-month-row[data-date="2025-11-16"]',
+      ) as HTMLElement;
       if (!row) return;
 
       mockRowRect(row, 700);
@@ -459,7 +474,10 @@ describe("Ghost element positioning during drag", () => {
 
       calendar.goToDate("2025-11-17");
 
-      const row = container.querySelector(".tg-month-row") as HTMLElement;
+      // Nov 17, 2025 is Monday - its week starts on Nov 16 (Sunday)
+      const row = container.querySelector(
+        '.tg-month-row[data-date="2025-11-16"]',
+      ) as HTMLElement;
       if (!row) return;
 
       // Use narrow width
