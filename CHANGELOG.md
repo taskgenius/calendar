@@ -5,6 +5,60 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.12.0]
+
+### ✨ Features
+
+- **Cross-midnight event support**: Timed events spanning multiple days now display correctly in week/day views
+  - First day shows event from start time to end of day (23:59)
+  - Middle days show full-day segments (00:00 to 23:59)
+  - Last day shows event from start of day (00:00) to end time
+  - Visual indicators (dashed borders, arrow indicators) for event continuation
+  - Segment info (`segmentIndex`, `totalSegments`) available in render hooks
+
+- **Custom event render hook (`onRenderEvent`)**: Full control over event element content
+  - Access to `EventRenderContext` with event, element, view type, and segment info
+  - `defaultRender()` function for incremental customization
+  - Works in both month and week/day views
+  - Supports both all-day and timed events
+
+- **Expanded `firstDayOfWeek` range**: Now supports any day of the week (0-6) instead of just 0, 1, or 6
+  - 0 = Sunday, 1 = Monday, 2 = Tuesday, ..., 6 = Saturday
+
+### 🐛 Bug Fixes
+
+- **Ghost element positioning during drag**: Fixed multiple issues with drag preview positioning
+  - Ghost width now uses percentage-based calculation for consistent sizing
+  - Ghost vertical position considers only events in overlapping columns
+  - Fixed `cellW` recalculation when container width changes during drag
+  - Scoped day column lookup to current calendar instance (prevents cross-calendar coupling)
+  - Use `getComputedStyle` instead of inline style for `--tg-allday-columns` CSS variable
+
+- **Resize top handle clamping**: Prevent inverted dates when dragging top resize handle past end time
+
+### 🏗️ Code Quality
+
+- **DRY refactoring in DragController**: Extract `getAllDayColumnCount()` helper method
+- **Performance optimization in MonthRenderer**: Pre-parse events and group by date for O(1) lookup
+
+### 📦 New Exports
+
+- `EventRenderContext` type for custom event render hooks
+- `DateCellContext` and `EventStyle` types (previously internal)
+
+### 🧪 Testing
+
+- Add comprehensive cross-midnight event tests in `TimeEngine.test.ts`:
+  - Test events on first/second/middle days
+  - Test `isCrossMidnightEvent()` and `getEventDaySpan()` methods
+  - Test 3-day spanning events with correct segment info
+  - Test events ending exactly at midnight (no zero-duration segments)
+  - Test `isStart`/`isEnd` flags for single-day events
+- Add ghost position integration tests in `Calendar.ghostPosition.test.ts`:
+  - Test width calculation in narrow containers
+  - Test vertical positioning with overlapping events
+  - Test column index calculation with varying widths
+
 ## [0.11.1]
 
 ### 🐛 Bug Fixes
@@ -527,7 +581,8 @@ new Calendar('#app', {
 - Lightweight (<12KB gzipped)
 - SOLID architecture
 
-[Unreleased]: https://github.com/taskgenius/calendar/compare/v0.11.0...HEAD
+[Unreleased]: https://github.com/taskgenius/calendar/compare/v0.12.0...HEAD
+[0.12.0]: https://github.com/taskgenius/calendar/compare/v0.11.1...v0.12.0
 [0.11.1]: https://github.com/taskgenius/calendar/compare/v0.11.0...v0.11.1
 [0.11.0]: https://github.com/taskgenius/calendar/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/taskgenius/calendar/compare/v0.9.3...v0.10.0
