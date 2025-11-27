@@ -224,6 +224,66 @@
             // ==================================================================================
             //  1. 数据与状态管理
             // ==================================================================================
+            const colorPalette = [
+                { className: "bg-blue-500", hex: "#3b82f6" },
+                { className: "bg-indigo-500", hex: "#6366f1" },
+                { className: "bg-purple-500", hex: "#a855f7" },
+                { className: "bg-green-500", hex: "#22c55e" },
+                { className: "bg-red-500", hex: "#ef4444" },
+                { className: "bg-orange-500", hex: "#f97316" },
+                { className: "bg-cyan-500", hex: "#06b6d4" },
+                { className: "bg-amber-500", hex: "#f59e0b" },
+                { className: "bg-rose-500", hex: "#f43f5e" },
+            ];
+            const sampleTitles = [
+                "Product sync",
+                "Design review",
+                "Data pipeline",
+                "Infra standup",
+                "Research slot",
+                "Customer call",
+                "Doc writing",
+                "1:1",
+                "Ops review",
+                "Bug triage",
+                "QA pass",
+            ];
+
+            function pickRandom(arr) {
+                return arr[Math.floor(Math.random() * arr.length)];
+            }
+
+            function generateRandomEvents(baseDate, count = 12) {
+                const startOfWeek = baseDate.startOf("week");
+                const events = [];
+
+                for (let i = 0; i < count; i++) {
+                    const dayOffset = Math.floor(Math.random() * 7);
+                    const startHour = 8 + Math.floor(Math.random() * 9); // 8-16
+                    const startMinute = Math.random() > 0.5 ? 30 : 0;
+                    const durationSlots = [30, 45, 60, 75, 90, 120];
+                    const duration = pickRandom(durationSlots);
+
+                    const start = startOfWeek
+                        .add(dayOffset, "day")
+                        .hour(startHour)
+                        .minute(startMinute);
+                    const end = start.add(duration, "minute");
+                    const color = pickRandom(colorPalette);
+
+                    events.push({
+                        id: `rand-${i}-${Date.now()}`,
+                        title: pickRandom(sampleTitles),
+                        start: start.format("YYYY-MM-DD HH:mm"),
+                        end: end.format("YYYY-MM-DD HH:mm"),
+                        color: color.className,
+                        rawColor: color.hex,
+                    });
+                }
+
+                return events;
+            }
+
             const state = {
                 currentView: "week",
                 currentDate: dayjs(),
@@ -337,6 +397,8 @@
                     },
                 ],
             };
+
+            state.events.push(...generateRandomEvents(dayjs(), 14));
 
             // 辅助工具
             const Utils = {

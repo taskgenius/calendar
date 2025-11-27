@@ -6,7 +6,11 @@ import {
   DayView,
 } from "../../../src";
 import type { ExtendedCalendarConfig } from "../../../src/core/Calendar";
-import type { CalendarEvent, ViewType } from "../../../src/types";
+import type {
+  CalendarEvent,
+  ViewType,
+  EventRenderContext,
+} from "../../../src/types";
 import "../../../src/styles/styles.css";
 import "./index.css";
 
@@ -44,11 +48,12 @@ const viewRegistry = createViewRegistry();
 interface ConfigState {
   view: string; // Changed from ViewType to string to support custom views
   showWeekends: boolean;
-  firstDayOfWeek: 0 | 1 | 6;
+  firstDayOfWeek: 0 | 1 | 2 | 3 | 4 | 5 | 6;
   maxEventsPerRow: number;
   activeDays: number[];
   draggable: boolean;
   snapMinutes: number;
+  customEventRender: boolean;
 }
 
 const state: ConfigState = {
@@ -59,6 +64,7 @@ const state: ConfigState = {
   activeDays: [0, 1, 2, 3, 4, 5, 6],
   draggable: true,
   snapMinutes: 15,
+  customEventRender: false,
 };
 
 // =============================================================================
@@ -154,6 +160,63 @@ function createCalendar(): void {
     onDateChange: (date) => {
       log(`[Navigate] ${formatDate(date)}`);
     },
+    // Custom event rendering hook
+    onRenderEvent: state.customEventRender
+      ? (ctx: EventRenderContext) => {
+          // Render default content first
+          ctx.defaultRender();
+
+          // Add custom icon based on event color
+          const icon = document.createElement("span");
+          icon.className = "custom-event-icon";
+          icon.style.cssText =
+            "margin-right: 4px; font-size: 10px; opacity: 0.8;";
+
+          // Choose icon based on color
+          const color = ctx.event.color || "#3b82f6";
+          if (color.includes("ff48") || color.includes("ec48")) {
+            icon.textContent = "🔥"; // Orange/Pink = urgent
+          } else if (color.includes("00a8") || color.includes("green")) {
+            icon.textContent = "✓"; // Green = done/good
+          } else if (color.includes("8b5c") || color.includes("purple")) {
+            icon.textContent = "⭐"; // Purple = starred
+          } else if (color.includes("ffcc") || color.includes("yellow")) {
+            icon.textContent = "⚠"; // Yellow = warning
+          } else {
+            icon.textContent = "📅"; // Default
+          }
+
+          // Insert icon at the beginning
+          if (ctx.el.firstChild) {
+            ctx.el.insertBefore(icon, ctx.el.firstChild);
+          } else {
+            ctx.el.appendChild(icon);
+          }
+
+          // Add segment indicator for multi-day events
+          if (
+            ctx.segmentIndex !== undefined &&
+            ctx.totalSegments !== undefined
+          ) {
+            const segmentBadge = document.createElement("span");
+            segmentBadge.className = "segment-badge";
+            segmentBadge.style.cssText =
+              "font-size: 9px; opacity: 0.6; margin-left: 4px;";
+            segmentBadge.textContent = `(${ctx.segmentIndex + 1}/${ctx.totalSegments})`;
+            ctx.el.appendChild(segmentBadge);
+          }
+
+          // Add time indicator for timed events in week/day view
+          if (ctx.startTime && ctx.viewType !== "month") {
+            const timeBadge = document.createElement("div");
+            timeBadge.className = "time-badge";
+            timeBadge.style.cssText =
+              "font-size: 9px; opacity: 0.7; margin-top: 2px;";
+            timeBadge.textContent = `⏰ ${ctx.startTime}`;
+            ctx.el.appendChild(timeBadge);
+          }
+        }
+      : undefined,
   };
 
   // Create calendar with custom registry
@@ -176,9 +239,14 @@ function getInitialEvents(): CalendarEvent[] {
     yellow: "#ffcc00",
     purple: "#8b5cf6",
     pink: "#ec4899",
+    teal: "#14b8a6",
+    red: "#ef4444",
+    indigo: "#6366f1",
+    amber: "#f59e0b",
   };
 
   return [
+    // === Regular timed events ===
     {
       id: "1",
       title: "Sprint Planning",
@@ -192,13 +260,6 @@ function getInitialEvents(): CalendarEvent[] {
       start: formatDate(addDays(startOfWeek, 1), 10, 30),
       end: formatDate(addDays(startOfWeek, 1), 12, 0),
       color: colors.yellow,
-    },
-    {
-      id: "3",
-      title: "Product Launch Week",
-      start: formatDate(addDays(startOfWeek, -1), 0, 0),
-      end: formatDate(addDays(startOfWeek, 2), 0, 0),
-      color: colors.orange,
     },
     {
       id: "4",
@@ -215,20 +276,30 @@ function getInitialEvents(): CalendarEvent[] {
       color: colors.blue,
     },
     {
-      id: "6",
-      title: "Team Building",
-      start: formatDate(addDays(startOfWeek, 4), 0, 0),
-      end: formatDate(addDays(startOfWeek, 4), 0, 0),
-      color: colors.green,
-    },
-    {
       id: "7",
       title: "Weekly Summary",
       start: formatDate(addDays(startOfWeek, 5), 16, 0),
       end: formatDate(addDays(startOfWeek, 5), 17, 0),
       color: colors.purple,
     },
-    // Weekend events for testing weekend view
+
+    // === All-day / multi-day events ===
+    {
+      id: "3",
+      title: "Product Launch Week",
+      start: formatDate(addDays(startOfWeek, -1), 0, 0),
+      end: formatDate(addDays(startOfWeek, 2), 0, 0),
+      color: colors.orange,
+    },
+    {
+      id: "6",
+      title: "Team Building",
+      start: formatDate(addDays(startOfWeek, 4), 0, 0),
+      end: formatDate(addDays(startOfWeek, 4), 0, 0),
+      color: colors.green,
+    },
+
+    // === Weekend events ===
     {
       id: "8",
       title: "Weekend Brunch",
@@ -243,7 +314,8 @@ function getInitialEvents(): CalendarEvent[] {
       end: formatDate(addDays(startOfWeek, 0), 18, 0),
       color: colors.orange,
     },
-    // Additional events to test row height adjustment
+
+    // === Multiple events on same day (test row height) ===
     {
       id: "10",
       title: "Event A",
@@ -271,6 +343,143 @@ function getInitialEvents(): CalendarEvent[] {
       start: formatDate(addDays(startOfWeek, 1), 0, 0),
       end: formatDate(addDays(startOfWeek, 1), 0, 0),
       color: colors.blue,
+    },
+
+    // === Cross-midnight events (NEW!) ===
+    {
+      id: "14",
+      title: "🌙 Late Night Coding",
+      start: formatDate(addDays(startOfWeek, 2), 22, 0),
+      end: formatDate(addDays(startOfWeek, 3), 2, 0),
+      color: colors.indigo,
+    },
+    {
+      id: "15",
+      title: "🎉 New Year Party",
+      start: formatDate(addDays(startOfWeek, 4), 21, 0),
+      end: formatDate(addDays(startOfWeek, 5), 3, 0),
+      color: colors.pink,
+    },
+    {
+      id: "16",
+      title: "🛫 Red-eye Flight",
+      start: formatDate(addDays(startOfWeek, 5), 23, 30),
+      end: formatDate(addDays(startOfWeek, 6), 6, 0),
+      color: colors.teal,
+    },
+
+    // === Multi-day timed event (spans 3 days) ===
+    {
+      id: "17",
+      title: "🏕️ Camping Trip",
+      start: formatDate(addDays(startOfWeek, 6), 18, 0),
+      end: formatDate(addDays(startOfWeek, 8), 12, 0),
+      color: colors.green,
+    },
+
+    // === Early morning events ===
+    {
+      id: "18",
+      title: "🏃 Morning Run",
+      start: formatDate(addDays(startOfWeek, 2), 6, 0),
+      end: formatDate(addDays(startOfWeek, 2), 7, 0),
+      color: colors.amber,
+    },
+    {
+      id: "19",
+      title: "☕ Breakfast Meeting",
+      start: formatDate(addDays(startOfWeek, 3), 7, 30),
+      end: formatDate(addDays(startOfWeek, 3), 8, 30),
+      color: colors.yellow,
+    },
+
+    // === Short events (test minimum height) ===
+    {
+      id: "20",
+      title: "Quick Standup",
+      start: formatDate(addDays(startOfWeek, 2), 9, 0),
+      end: formatDate(addDays(startOfWeek, 2), 9, 15),
+      color: colors.blue,
+    },
+    {
+      id: "21",
+      title: "5min Check-in",
+      start: formatDate(addDays(startOfWeek, 3), 11, 0),
+      end: formatDate(addDays(startOfWeek, 3), 11, 5),
+      color: colors.teal,
+    },
+
+    // === Long events ===
+    {
+      id: "22",
+      title: "📚 Training Workshop",
+      start: formatDate(addDays(startOfWeek, 4), 9, 0),
+      end: formatDate(addDays(startOfWeek, 4), 17, 0),
+      color: colors.purple,
+    },
+
+    // === Overlapping events ===
+    {
+      id: "23",
+      title: "Meeting A",
+      start: formatDate(addDays(startOfWeek, 3), 10, 0),
+      end: formatDate(addDays(startOfWeek, 3), 11, 30),
+      color: colors.blue,
+    },
+    {
+      id: "24",
+      title: "Meeting B",
+      start: formatDate(addDays(startOfWeek, 3), 10, 30),
+      end: formatDate(addDays(startOfWeek, 3), 12, 0),
+      color: colors.red,
+    },
+    {
+      id: "25",
+      title: "Meeting C",
+      start: formatDate(addDays(startOfWeek, 3), 11, 0),
+      end: formatDate(addDays(startOfWeek, 3), 12, 30),
+      color: colors.amber,
+    },
+
+    // === Events on today ===
+    {
+      id: "26",
+      title: "📅 Today's Task",
+      start: formatDate(today, 15, 0),
+      end: formatDate(today, 16, 30),
+      color: colors.indigo,
+    },
+    {
+      id: "27",
+      title: "🔔 Reminder",
+      start: formatDate(today, 9, 0),
+      end: formatDate(today, 9, 30),
+      color: colors.red,
+    },
+
+    // === Event ending at midnight ===
+    {
+      id: "28",
+      title: "🎬 Movie Night",
+      start: formatDate(addDays(startOfWeek, 5), 20, 0),
+      end: formatDate(addDays(startOfWeek, 6), 0, 0),
+      color: colors.purple,
+    },
+
+    // === Next week preview ===
+    {
+      id: "29",
+      title: "Next Week Planning",
+      start: formatDate(addDays(startOfWeek, 8), 10, 0),
+      end: formatDate(addDays(startOfWeek, 8), 11, 0),
+      color: colors.teal,
+    },
+    {
+      id: "30",
+      title: "🎯 Q1 Goals Review",
+      start: formatDate(addDays(startOfWeek, 9), 0, 0),
+      end: formatDate(addDays(startOfWeek, 11), 0, 0),
+      color: colors.orange,
     },
   ];
 }
@@ -347,12 +556,15 @@ function updateConfigDisplay(): void {
         showWeekends: state.showWeekends,
         firstDayOfWeek: state.firstDayOfWeek,
         maxEventsPerRow: state.maxEventsPerRow,
-        ...(state.activeDays.length < 7 && { activeDays: state.activeDays }),
+        ...(state.activeDays.length < 7 && {
+          activeDays: state.activeDays,
+        }),
       },
       draggable: {
         enabled: state.draggable,
         snapMinutes: state.snapMinutes,
       },
+      customEventRender: state.customEventRender,
       registeredViews: viewRegistry.getAll().map((v) => v.type),
     };
     configEl.textContent = JSON.stringify(displayConfig, null, 2);
@@ -428,10 +640,17 @@ function updateViewButtons(): void {
 
 (window as any).setFirstDay = () => {
   const select = document.getElementById("first-day") as HTMLSelectElement;
-  state.firstDayOfWeek = parseInt(select.value, 10) as 0 | 1 | 6;
+  state.firstDayOfWeek = parseInt(select.value, 10) as
+    | 0
+    | 1
+    | 2
+    | 3
+    | 4
+    | 5
+    | 6;
   createCalendar();
   log(
-    `[Config] First day: ${["Sun", "Mon", "", "", "", "", "Sat"][state.firstDayOfWeek]}`,
+    `[Config] First day: ${["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][state.firstDayOfWeek]}`,
   );
 };
 
@@ -513,6 +732,18 @@ function updateDayCheckboxes(): void {
   calendar.setDraggable(state.draggable);
   updateConfigDisplay();
   log(`[Config] Drag: ${state.draggable ? "ON" : "OFF"}`);
+};
+
+// Custom event render toggle
+(window as any).toggleCustomRender = () => {
+  const checkbox = document.getElementById(
+    "toggle-custom-render",
+  ) as HTMLInputElement;
+  state.customEventRender = checkbox?.checked ?? false;
+  createCalendar(); // Recreate calendar to apply new render hook
+  log(
+    `[Config] Custom Event Render: ${state.customEventRender ? "ON" : "OFF"}`,
+  );
 };
 
 (window as any).setSnapMinutes = () => {
