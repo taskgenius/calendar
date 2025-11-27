@@ -110,8 +110,8 @@ export interface ViewConfig {
   showDateHeader?: boolean;
   /** Show week numbers in month view */
   showWeekNumbers?: boolean;
-  /** First day of week: 0 = Sunday, 1 = Monday, 6 = Saturday (default: 0) */
-  firstDayOfWeek?: 0 | 1 | 6;
+  /** First day of week: 0 = Sunday, 1 = Monday, ..., 6 = Saturday (default: 0) */
+  firstDayOfWeek?: 0 | 1 | 2 | 3 | 4 | 5 | 6;
   /** Show weekends (Saturday and Sunday) (default: true). Note: dayFilter takes precedence if provided. */
   showWeekends?: boolean;
   /**
@@ -289,6 +289,38 @@ export interface EventStyle {
   opacity?: number;
 }
 
+/**
+ * Context provided to custom event render hook
+ * Allows full customization of event element content based on view type and layout
+ */
+export interface EventRenderContext {
+  /** The event being rendered */
+  event: CalendarEvent;
+  /** The event element container (already positioned and styled) */
+  el: HTMLElement;
+  /** Current view type */
+  viewType: ViewType;
+  /** Whether this is an all-day event (only relevant for week/day views) */
+  isAllDay: boolean;
+  /** Start time formatted string (for timed events) */
+  startTime?: string;
+  /** End time formatted string (for timed events) */
+  endTime?: string;
+  /** Whether this event segment is the start of the original event */
+  isStart: boolean;
+  /** Whether this event segment is the end of the original event */
+  isEnd: boolean;
+  /** Segment index when event is split by filtered days (0-based), undefined if not segmented */
+  segmentIndex?: number;
+  /** Total number of segments for this event, undefined if not segmented */
+  totalSegments?: number;
+  /**
+   * Default render function - call this to render the default content
+   * Useful when you only want to add extra content without replacing the default
+   */
+  defaultRender: () => void;
+}
+
 // =============================================================================
 // Theme Types
 // =============================================================================
@@ -418,6 +450,7 @@ export interface AllDayLayoutItem {
 
 /**
  * Layout information for a time view event
+ * Supports cross-midnight events that span multiple days
  */
 export interface TimeLayoutItem {
   /** Original event data */
@@ -436,6 +469,20 @@ export interface TimeLayoutItem {
   startMin: number;
   /** End time in minutes from midnight */
   endMin: number;
+  /** Whether this segment is the start of the original event */
+  isStart: boolean;
+  /** Whether this segment is the end of the original event */
+  isEnd: boolean;
+  /**
+   * Segment index when event spans multiple days (0-based)
+   * undefined if event is contained within a single day
+   */
+  segmentIndex?: number;
+  /**
+   * Total number of day segments for this event
+   * undefined if event is contained within a single day
+   */
+  totalSegments?: number;
 }
 
 /**
@@ -555,6 +602,42 @@ export interface CalendarConfig {
   /** Hook to customize event styling */
   onStyleEvent?: (event: CalendarEvent) => EventStyle;
   /**
+   * Hook to customize event element rendering
+   * Called after the event element is created and positioned, allowing full customization of content
+   *
+   * @param ctx - Event render context containing the event, element, and view information
+   *
+   * @example
+   * ```typescript
+   * // Add custom content to events
+   * onRenderEvent: (ctx) => {
+   *   // First render default content
+   *   ctx.defaultRender();
+   *
+   *   // Add priority badge
+   *   const priority = ctx.event.metadata?.priority as number;
+   *   if (priority >= 2) {
+   *     const badge = document.createElement('span');
+   *     badge.className = 'priority-badge';
+   *     badge.textContent = '!';
+   *     ctx.el.appendChild(badge);
+   *   }
+   * }
+   *
+   * // Completely custom rendering
+   * onRenderEvent: (ctx) => {
+   *   // Don't call defaultRender() - render everything yourself
+   *   ctx.el.innerHTML = `
+   *     <div class="my-custom-event">
+   *       <span class="icon">${ctx.event.metadata?.icon || '📅'}</span>
+   *       <span class="title">${ctx.event.title}</span>
+   *     </div>
+   *   `;
+   * }
+   * ```
+   */
+  onRenderEvent?: (ctx: EventRenderContext) => void;
+  /**
    * Custom renderer for the "more events" popover in month view
    * Called when user clicks the "+N more" indicator
    * If not provided, a default popover will be shown
@@ -613,6 +696,7 @@ export interface ResolvedCalendarConfig {
   onTimeRangeSelect?: (startDateTime: Date, endDateTime: Date) => void;
   onRenderDateCell?: (ctx: DateCellContext) => void;
   onStyleEvent?: (event: CalendarEvent) => EventStyle;
+  onRenderEvent?: (ctx: EventRenderContext) => void;
   onRenderMoreEventsPopover?: (
     events: CalendarEvent[],
     date: Date,

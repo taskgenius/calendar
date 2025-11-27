@@ -168,7 +168,7 @@ interface ViewConfig {
   type: 'month' | 'week' | 'day';  // Default: 'week'
   showDateHeader?: boolean;         // Default: true
   showWeekNumbers?: boolean;        // Default: false
-  firstDayOfWeek?: 0 | 1 | 6;      // Default: 0 (Sunday)
+  firstDayOfWeek?: 0 | 1 | 2 | 3 | 4 | 5 | 6;  // Default: 0 (Sunday)
   showWeekends?: boolean;           // Default: true
 }
 ```

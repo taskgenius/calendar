@@ -91,4 +91,7 @@ export type {
   TimeFormatter,
   DayFilterResult,
   TimeFilterResult,
+  DateCellContext,
+  EventStyle,
+  EventRenderContext,
 } from "./types";
