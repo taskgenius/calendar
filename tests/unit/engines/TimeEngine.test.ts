@@ -145,19 +145,48 @@ describe("TimeEngine", () => {
       expect(layout[1]!.widthPercent).toBe(100);
     });
 
-    it("should filter out multi-day events", () => {
+    it("should show cross-midnight events on first day", () => {
       const events: CalendarEvent[] = [
         {
           id: "1",
-          title: "Multi-day",
-          start: "2025-11-20 10:00",
-          end: "2025-11-21 11:00", // Ends next day
+          title: "Cross-midnight",
+          start: "2025-11-20 22:00",
+          end: "2025-11-21 02:00", // Ends next day at 2 AM
           color: "#3b82f6",
         },
       ];
 
       const layout = engine.calculateLayout(events, "2025-11-20");
-      expect(layout).toHaveLength(0);
+
+      expect(layout).toHaveLength(1);
+      expect(layout[0]!.startMin).toBe(22 * 60); // 22:00
+      expect(layout[0]!.endMin).toBe(24 * 60); // End of day
+      expect(layout[0]!.isStart).toBe(true);
+      expect(layout[0]!.isEnd).toBe(false);
+      expect(layout[0]!.segmentIndex).toBe(0);
+      expect(layout[0]!.totalSegments).toBe(2);
+    });
+
+    it("should show cross-midnight events on second day", () => {
+      const events: CalendarEvent[] = [
+        {
+          id: "1",
+          title: "Cross-midnight",
+          start: "2025-11-20 22:00",
+          end: "2025-11-21 02:00", // Ends next day at 2 AM
+          color: "#3b82f6",
+        },
+      ];
+
+      const layout = engine.calculateLayout(events, "2025-11-21");
+
+      expect(layout).toHaveLength(1);
+      expect(layout[0]!.startMin).toBe(0); // Start of day
+      expect(layout[0]!.endMin).toBe(2 * 60); // 02:00
+      expect(layout[0]!.isStart).toBe(false);
+      expect(layout[0]!.isEnd).toBe(true);
+      expect(layout[0]!.segmentIndex).toBe(1);
+      expect(layout[0]!.totalSegments).toBe(2);
     });
 
     it("should filter out events from other days", () => {
@@ -231,6 +260,204 @@ describe("TimeEngine", () => {
       };
 
       expect(engine.isSingleDayEvent(event)).toBe(false);
+    });
+  });
+
+  describe("isCrossMidnightEvent", () => {
+    it("should return true for event crossing midnight", () => {
+      const event: CalendarEvent = {
+        id: "1",
+        title: "Night Event",
+        start: "2025-11-20 22:00",
+        end: "2025-11-21 02:00",
+        color: "#3b82f6",
+      };
+
+      expect(engine.isCrossMidnightEvent(event)).toBe(true);
+    });
+
+    it("should return false for single-day event", () => {
+      const event: CalendarEvent = {
+        id: "1",
+        title: "Day Event",
+        start: "2025-11-20 10:00",
+        end: "2025-11-20 12:00",
+        color: "#3b82f6",
+      };
+
+      expect(engine.isCrossMidnightEvent(event)).toBe(false);
+    });
+
+    it("should return false for all-day event", () => {
+      const event: CalendarEvent = {
+        id: "1",
+        title: "All Day",
+        start: "2025-11-20 00:00",
+        end: "2025-11-21 00:00",
+        color: "#3b82f6",
+      };
+
+      expect(engine.isCrossMidnightEvent(event)).toBe(false);
+    });
+  });
+
+  describe("getEventDaySpan", () => {
+    it("should return 1 for single-day event", () => {
+      const event: CalendarEvent = {
+        id: "1",
+        title: "Single Day",
+        start: "2025-11-20 10:00",
+        end: "2025-11-20 12:00",
+        color: "#3b82f6",
+      };
+
+      expect(engine.getEventDaySpan(event)).toBe(1);
+    });
+
+    it("should return 2 for cross-midnight event", () => {
+      const event: CalendarEvent = {
+        id: "1",
+        title: "Cross Midnight",
+        start: "2025-11-20 22:00",
+        end: "2025-11-21 02:00",
+        color: "#3b82f6",
+      };
+
+      expect(engine.getEventDaySpan(event)).toBe(2);
+    });
+
+    it("should return 3 for three-day event", () => {
+      const event: CalendarEvent = {
+        id: "1",
+        title: "Three Days",
+        start: "2025-11-20 10:00",
+        end: "2025-11-22 10:00",
+        color: "#3b82f6",
+      };
+
+      expect(engine.getEventDaySpan(event)).toBe(3);
+    });
+  });
+
+  describe("cross-midnight event layout", () => {
+    it("should handle event spanning 3 days", () => {
+      const events: CalendarEvent[] = [
+        {
+          id: "1",
+          title: "Long Event",
+          start: "2025-11-20 20:00",
+          end: "2025-11-22 06:00",
+          color: "#3b82f6",
+        },
+      ];
+
+      // First day: 20:00 - 24:00
+      const day1 = engine.calculateLayout(events, "2025-11-20");
+      expect(day1).toHaveLength(1);
+      expect(day1[0]!.startMin).toBe(20 * 60);
+      expect(day1[0]!.endMin).toBe(24 * 60);
+      expect(day1[0]!.isStart).toBe(true);
+      expect(day1[0]!.isEnd).toBe(false);
+      expect(day1[0]!.segmentIndex).toBe(0);
+      expect(day1[0]!.totalSegments).toBe(3);
+
+      // Middle day: 00:00 - 24:00 (full day)
+      const day2 = engine.calculateLayout(events, "2025-11-21");
+      expect(day2).toHaveLength(1);
+      expect(day2[0]!.startMin).toBe(0);
+      expect(day2[0]!.endMin).toBe(24 * 60);
+      expect(day2[0]!.isStart).toBe(false);
+      expect(day2[0]!.isEnd).toBe(false);
+      expect(day2[0]!.segmentIndex).toBe(1);
+      expect(day2[0]!.totalSegments).toBe(3);
+
+      // Last day: 00:00 - 06:00
+      const day3 = engine.calculateLayout(events, "2025-11-22");
+      expect(day3).toHaveLength(1);
+      expect(day3[0]!.startMin).toBe(0);
+      expect(day3[0]!.endMin).toBe(6 * 60);
+      expect(day3[0]!.isStart).toBe(false);
+      expect(day3[0]!.isEnd).toBe(true);
+      expect(day3[0]!.segmentIndex).toBe(2);
+      expect(day3[0]!.totalSegments).toBe(3);
+    });
+
+    it("should handle cross-midnight event ending at midnight", () => {
+      const events: CalendarEvent[] = [
+        {
+          id: "1",
+          title: "Until Midnight",
+          start: "2025-11-20 22:00",
+          end: "2025-11-21 00:00", // Ends exactly at midnight
+          color: "#3b82f6",
+        },
+      ];
+
+      // First day should show the event
+      const day1 = engine.calculateLayout(events, "2025-11-20");
+      expect(day1).toHaveLength(1);
+      expect(day1[0]!.startMin).toBe(22 * 60);
+      expect(day1[0]!.endMin).toBe(24 * 60);
+
+      // Second day should NOT show the event (ends at 00:00, no duration)
+      const day2 = engine.calculateLayout(events, "2025-11-21");
+      expect(day2).toHaveLength(0);
+    });
+
+    it("should include isStart/isEnd for single-day events", () => {
+      const events: CalendarEvent[] = [
+        {
+          id: "1",
+          title: "Single Day",
+          start: "2025-11-20 10:00",
+          end: "2025-11-20 12:00",
+          color: "#3b82f6",
+        },
+      ];
+
+      const layout = engine.calculateLayout(events, "2025-11-20");
+
+      expect(layout).toHaveLength(1);
+      expect(layout[0]!.isStart).toBe(true);
+      expect(layout[0]!.isEnd).toBe(true);
+      expect(layout[0]!.segmentIndex).toBeUndefined();
+      expect(layout[0]!.totalSegments).toBeUndefined();
+    });
+
+    it("should not show cross-midnight events on unrelated days", () => {
+      const events: CalendarEvent[] = [
+        {
+          id: "1",
+          title: "Cross Midnight",
+          start: "2025-11-20 22:00",
+          end: "2025-11-21 02:00",
+          color: "#3b82f6",
+        },
+      ];
+
+      // Day before - should not show
+      const dayBefore = engine.calculateLayout(events, "2025-11-19");
+      expect(dayBefore).toHaveLength(0);
+
+      // Day after - should not show
+      const dayAfter = engine.calculateLayout(events, "2025-11-22");
+      expect(dayAfter).toHaveLength(0);
+    });
+
+    it("should filter all-day events from calculateLayout", () => {
+      const events: CalendarEvent[] = [
+        {
+          id: "1",
+          title: "All Day Event",
+          start: "2025-11-20 00:00",
+          end: "2025-11-21 00:00",
+          color: "#3b82f6",
+        },
+      ];
+
+      const layout = engine.calculateLayout(events, "2025-11-20");
+      // All-day events should be handled by calculateAllDayLayout, not calculateLayout
+      expect(layout).toHaveLength(0);
     });
   });
 
