@@ -353,7 +353,7 @@
                 align-items: center;
             }
 
-            .panel-header button {
+            .panel-header > button {
                 background: white;
                 color: #000;
                 border: none;
@@ -365,7 +365,44 @@
                 transition: all 0.1s;
             }
 
-            .panel-header button:hover {
+            .panel-header > button:hover {
+                background: var(--accent-yellow);
+            }
+
+            /* --- Panel Tabs --- */
+            .panel-tabs {
+                display: flex;
+                gap: 0;
+            }
+
+            .panel-tab {
+                background: transparent;
+                color: rgba(255, 255, 255, 0.6);
+                border: none;
+                padding: 4px 12px;
+                font-size: 11px;
+                font-weight: 700;
+                text-transform: uppercase;
+                cursor: pointer;
+                transition: all 0.1s;
+                position: relative;
+            }
+
+            .panel-tab:hover {
+                color: rgba(255, 255, 255, 0.9);
+            }
+
+            .panel-tab.active {
+                color: #fff;
+            }
+
+            .panel-tab.active::after {
+                content: "";
+                position: absolute;
+                bottom: -2px;
+                left: 0;
+                right: 0;
+                height: 2px;
                 background: var(--accent-yellow);
             }
 
@@ -686,12 +723,39 @@
                     <!-- Config Export Panel -->
                     <div class="panel-box">
                         <div class="panel-header">
-                            <span>Current Config</span>
-                            <button onclick="copyConfig()">Copy</button>
+                            <div class="panel-tabs">
+                                <button
+                                    class="panel-tab active"
+                                    data-tab="config"
+                                    onclick="switchConfigTab('config')"
+                                >
+                                    Config
+                                </button>
+                                <button
+                                    class="panel-tab"
+                                    data-tab="events"
+                                    onclick="switchConfigTab('events')"
+                                >
+                                    Events
+                                </button>
+                            </div>
+                            <button
+                                id="config-action-btn"
+                                onclick="copyConfig()"
+                            >
+                                Copy
+                            </button>
                         </div>
                         <div class="panel-content">
                             <pre class="config-display" id="config-display">
 {}</pre
+                            >
+                            <pre
+                                class="config-display"
+                                id="events-display"
+                                style="display: none"
+                            >
+[]</pre
                             >
                         </div>
                     </div>

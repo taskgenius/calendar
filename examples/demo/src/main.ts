@@ -753,6 +753,22 @@ function updateDayCheckboxes(): void {
   log(`[Config] Snap: ${state.snapMinutes} min`);
 };
 
+// =============================================================================
+// Config Panel Tab State
+// =============================================================================
+let currentConfigTab: "config" | "events" = "config";
+
+/**
+ * Update the events display panel with current calendar events (JSON format)
+ */
+function updateEventsDisplay(): void {
+  const eventsDisplay = document.getElementById("events-display");
+  if (!eventsDisplay) return;
+
+  const events = calendar.getEvents();
+  eventsDisplay.textContent = JSON.stringify(events, null, 2);
+}
+
 // Event actions
 let eventCounter = 100;
 
@@ -781,11 +797,21 @@ let eventCounter = 100;
 
   calendar.addEvent(event);
   log(`[Event] Added: ${event.title}`);
+
+  // Update events display if currently visible
+  if (currentConfigTab === "events") {
+    updateEventsDisplay();
+  }
 };
 
 (window as any).clearEvents = () => {
   calendar.setEvents([]);
   log("[Event] All events cleared");
+
+  // Update events display if currently visible
+  if (currentConfigTab === "events") {
+    updateEventsDisplay();
+  }
 };
 
 // Log control
@@ -799,11 +825,53 @@ let eventCounter = 100;
 
 // Config copy
 (window as any).copyConfig = () => {
-  const configEl = document.getElementById("config-display");
-  if (configEl) {
-    navigator.clipboard.writeText(configEl.textContent || "{}").then(() => {
-      log("[Config] Copied to clipboard");
+  const activeTab = document
+    .querySelector(".panel-tab.active")
+    ?.getAttribute("data-tab");
+  if (activeTab === "config") {
+    const configEl = document.getElementById("config-display");
+    if (configEl) {
+      navigator.clipboard.writeText(configEl.textContent || "{}").then(() => {
+        log("[Config] Copied to clipboard");
+      });
+    }
+  } else if (activeTab === "events") {
+    const events = calendar.getEvents();
+    navigator.clipboard.writeText(JSON.stringify(events, null, 2)).then(() => {
+      log("[Events] Copied to clipboard");
     });
+  }
+};
+
+// =============================================================================
+// Config Panel Tab Switching
+// =============================================================================
+(window as any).switchConfigTab = (tab: "config" | "events") => {
+  currentConfigTab = tab;
+
+  // Update tab active states
+  document.querySelectorAll(".panel-tab").forEach((btn) => {
+    btn.classList.toggle("active", btn.getAttribute("data-tab") === tab);
+  });
+
+  // Toggle content visibility
+  const configDisplay = document.getElementById("config-display");
+  const eventsDisplay = document.getElementById("events-display");
+  const actionBtn = document.getElementById("config-action-btn");
+
+  if (configDisplay && eventsDisplay && actionBtn) {
+    if (tab === "config") {
+      configDisplay.style.display = "block";
+      eventsDisplay.style.display = "none";
+      actionBtn.textContent = "Copy";
+      actionBtn.onclick = () => (window as any).copyConfig();
+    } else {
+      configDisplay.style.display = "none";
+      eventsDisplay.style.display = "block";
+      actionBtn.textContent = "Copy";
+      actionBtn.onclick = () => (window as any).copyConfig();
+      updateEventsDisplay();
+    }
   }
 };
 
