@@ -664,7 +664,7 @@ export class TimeEngine<T> {
 
   /**
    * Calculate column positions for events within a group
-   * Uses a greedy column packing algorithm
+   * Uses a greedy column packing algorithm with smart expansion
    */
   private calculateColumnPositions(group: EventGeometry[]): void {
     // Track the end time of each column
@@ -690,11 +690,56 @@ export class TimeEngine<T> {
       }
     }
 
-    // Apply width and left offset based on number of columns
     const numCols = columns.length;
+
+    if (numCols === 1) {
+      // Single event - full width
+      for (const ev of group) {
+        ev.widthPercent = 100;
+        ev.leftPercent = 0;
+      }
+      return;
+    }
+
+    const offsetPerCol = 100 / numCols;
+
+    // Width multiplier determines how much each event extends into neighbor space
+    // Adjust based on column count for better visual balance
+    const widthMultiplier = numCols <= 3 ? 1.6 : numCols <= 5 ? 1.5 : 1.4;
+
     for (const ev of group) {
-      ev.widthPercent = 100 / numCols;
-      ev.leftPercent = ev.colIndex * ev.widthPercent;
+      const leftOffset = ev.colIndex * offsetPerCol;
+
+      // Check for available space to the right (expansion)
+      // Find how many subsequent columns are free during this event's time
+      let span = 1;
+      for (let c = ev.colIndex + 1; c < numCols; c++) {
+        // Check collision with any event in column 'c'
+        const hasCollision = group.some(
+          (other) =>
+            other.colIndex === c &&
+            other.startMin < ev.endMin &&
+            other.endMin > ev.startMin,
+        );
+
+        if (hasCollision) {
+          break;
+        }
+        span++;
+      }
+
+      // Calculate width with expansion
+      // Base width (overlapping) + spanned columns
+      const expandedWidth = offsetPerCol * (span - 1 + widthMultiplier);
+      const maxWidth = 100 - leftOffset;
+
+      ev.leftPercent = leftOffset;
+      ev.widthPercent = Math.min(expandedWidth, maxWidth);
+
+      // If expanded to the last column, ensure it hits the edge exactly
+      if (ev.colIndex + span === numCols) {
+        ev.widthPercent = maxWidth;
+      }
     }
   }
 }

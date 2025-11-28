@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.13.1]
+
+### ✨ Features
+
+- **Smart event expansion**: Overlapping events now intelligently expand into available space
+  - Events automatically extend width when adjacent columns are free during their time slot
+  - Width multiplier adjusts based on column count (1.6 for ≤3 cols, 1.5 for ≤5 cols, 1.4 for more)
+  - Last column events extend to container edge for clean visual appearance
+
+### 🐛 Bug Fixes
+
+- **Short event clickability**: Events with shorter duration now always appear on top
+  - Z-index calculated based on event duration (shorter events get higher z-index)
+  - Ensures 5-minute meetings are always clickable over longer overlapping events
+
+### 🧪 Testing
+
+- Comprehensive test coverage for smart expansion algorithm
+  - Staircase overlap patterns with column reuse
+  - 4-event cascading layout scenarios
+  - Separate group handling verification
+  - Real-world Nov 26 scenario with 4 overlapping events
+
 ## [0.13.0]
 
 ### ✨ Features

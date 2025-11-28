@@ -776,6 +776,18 @@ export class TimeRenderer<T> {
     el.style.height = `${item.height}px`;
     el.style.backgroundColor = bgColor;
 
+    // Z-index: shorter duration events get higher z-index (appear on top)
+    // This ensures smaller events are always clickable, regardless of column position
+    // Duration in minutes (endMin - startMin), shorter = higher z-index
+    const duration = item.endMin - item.startMin;
+    // Invert: short events (e.g., 15min) get high z-index, long events (e.g., 120min) get low
+    // Base z-index 10, add inverse of duration (capped to reasonable range)
+    const durationZIndex = Math.max(
+      0,
+      Math.min(50, Math.floor((120 - duration) / 2)),
+    );
+    el.style.zIndex = `${10 + durationZIndex}`;
+
     if (customOpacity !== undefined) {
       el.style.opacity = customOpacity.toString();
     }

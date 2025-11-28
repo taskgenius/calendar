@@ -79,15 +79,18 @@ describe("TimeEngine", () => {
       const layout = engine.calculateLayout(events, "2025-11-20");
 
       expect(layout).toHaveLength(2);
-      // Both should have 50% width
-      expect(layout[0]!.widthPercent).toBe(50);
-      expect(layout[1]!.widthPercent).toBe(50);
-      // Different left positions
+      // Uniform width distribution: offset = 100/2 = 50%
+      // Col 0: left=0%, Col 1: left=50%
       expect(layout[0]!.leftPercent).toBe(0);
       expect(layout[1]!.leftPercent).toBe(50);
+      // Width multiplier for 2 cols = 1.6, baseWidth = 50 * 1.6 = 80%
+      // Col 0: min(80, 100-0) = 80%
+      // Col 1: min(80, 100-50) = 50%
+      expect(layout[0]!.widthPercent).toBe(80);
+      expect(layout[1]!.widthPercent).toBe(50);
     });
 
-    it("should handle three overlapping events", () => {
+    it("should handle three overlapping events with cascading layout", () => {
       const events: CalendarEvent[] = [
         {
           id: "1",
@@ -115,8 +118,300 @@ describe("TimeEngine", () => {
       const layout = engine.calculateLayout(events, "2025-11-20");
 
       expect(layout).toHaveLength(3);
-      // Should have approximately 33.33% width each
-      expect(layout[0]!.widthPercent).toBeCloseTo(33.33, 1);
+      // Uniform distribution: offset = 100/3 = 33.33%
+      // Width multiplier for 3 cols = 1.6, baseWidth = 33.33 * 1.6 = 53.33%
+      const offset = 100 / 3; // ~33.33
+      const baseWidth = offset * 1.6; // ~53.33
+      expect(layout[0]!.leftPercent).toBeCloseTo(0, 1);
+      expect(layout[1]!.leftPercent).toBeCloseTo(offset, 1);
+      expect(layout[2]!.leftPercent).toBeCloseTo(offset * 2, 1);
+      // Col 0: min(53.33, 100) = 53.33%
+      // Col 1: min(53.33, 66.67) = 53.33%
+      // Col 2: min(53.33, 33.33) = 33.33%
+      expect(layout[0]!.widthPercent).toBeCloseTo(baseWidth, 1);
+      expect(layout[1]!.widthPercent).toBeCloseTo(baseWidth, 1);
+      expect(layout[2]!.widthPercent).toBeCloseTo(100 - offset * 2, 1);
+    });
+
+    it("should use cascading layout for staircase overlap scenario", () => {
+      // Staircase overlap scenario - now uses uniform width distribution
+      const events: CalendarEvent[] = [
+        {
+          id: "23",
+          title: "Meeting A",
+          start: "2025-11-26 10:00",
+          end: "2025-11-26 11:30",
+          color: "#2b4fff",
+        },
+        {
+          id: "24",
+          title: "Meeting B",
+          start: "2025-11-26 10:30",
+          end: "2025-11-26 12:00",
+          color: "#ef4444",
+        },
+        {
+          id: "25",
+          title: "Meeting C",
+          start: "2025-11-26 11:00",
+          end: "2025-11-26 12:30",
+          color: "#f59e0b",
+        },
+      ];
+
+      const layout = engine.calculateLayout(events, "2025-11-26");
+
+      expect(layout).toHaveLength(3);
+
+      const meetingA = layout.find((l) => l.event.id === "23")!;
+      const meetingB = layout.find((l) => l.event.id === "24")!;
+      const meetingC = layout.find((l) => l.event.id === "25")!;
+
+      // Column assignment remains the same
+      expect(meetingA.colIndex).toBe(0);
+      expect(meetingB.colIndex).toBe(1);
+      expect(meetingC.colIndex).toBe(2);
+
+      // 3 columns: offset = 100/3 = 33.33%
+      const offset = 100 / 3;
+      expect(meetingA.leftPercent).toBeCloseTo(0, 1);
+      expect(meetingB.leftPercent).toBeCloseTo(offset, 1);
+      expect(meetingC.leftPercent).toBeCloseTo(offset * 2, 1);
+
+      // Each event has reasonable width with uniform distribution
+      // baseWidth = 33.33 * 1.6 = 53.33%
+      expect(meetingA.widthPercent).toBeGreaterThan(50);
+      expect(meetingB.widthPercent).toBeGreaterThan(50);
+      expect(meetingC.widthPercent).toBeCloseTo(100 - offset * 2, 1); // ~33.33%
+    });
+
+    it("should use cascading layout for true staircase pattern", () => {
+      // True staircase: A overlaps B, B overlaps C, but A does NOT overlap C
+      const events: CalendarEvent[] = [
+        {
+          id: "A",
+          title: "Event A",
+          start: "2025-11-26 10:00",
+          end: "2025-11-26 10:45",
+          color: "#2b4fff",
+        },
+        {
+          id: "B",
+          title: "Event B",
+          start: "2025-11-26 10:30",
+          end: "2025-11-26 11:15",
+          color: "#ef4444",
+        },
+        {
+          id: "C",
+          title: "Event C",
+          start: "2025-11-26 11:00",
+          end: "2025-11-26 11:45",
+          color: "#f59e0b",
+        },
+      ];
+
+      const layout = engine.calculateLayout(events, "2025-11-26");
+
+      expect(layout).toHaveLength(3);
+
+      const eventA = layout.find((l) => l.event.id === "A")!;
+      const eventB = layout.find((l) => l.event.id === "B")!;
+      const eventC = layout.find((l) => l.event.id === "C")!;
+
+      // Column assignment with greedy algorithm:
+      // A -> col 0, B -> col 1, C -> col 0 (reuses since A ended)
+      expect(eventA.colIndex).toBe(0);
+      expect(eventB.colIndex).toBe(1);
+      expect(eventC.colIndex).toBe(0);
+
+      // With 2 columns: offset = 100/2 = 50%
+      expect(eventA.leftPercent).toBe(0);
+      expect(eventB.leftPercent).toBe(50);
+      expect(eventC.leftPercent).toBe(0); // Same column as A
+
+      // Width multiplier for 2 cols = 1.6, baseWidth = 50 * 1.6 = 80%
+      // Col 0: min(80, 100) = 80%
+      // Col 1: min(80, 50) = 50%
+      expect(eventA.widthPercent).toBe(80);
+      expect(eventB.widthPercent).toBe(50);
+      expect(eventC.widthPercent).toBe(80);
+    });
+
+    it("should use cascading layout for 4-event staircase", () => {
+      // 4-event staircase where greedy algorithm reuses columns
+      const events: CalendarEvent[] = [
+        {
+          id: "A",
+          title: "Event A",
+          start: "2025-11-26 10:00",
+          end: "2025-11-26 10:30",
+          color: "#2b4fff",
+        },
+        {
+          id: "B",
+          title: "Event B",
+          start: "2025-11-26 10:15",
+          end: "2025-11-26 10:45",
+          color: "#ef4444",
+        },
+        {
+          id: "C",
+          title: "Event C",
+          start: "2025-11-26 10:30",
+          end: "2025-11-26 11:00",
+          color: "#f59e0b",
+        },
+        {
+          id: "D",
+          title: "Event D",
+          start: "2025-11-26 10:45",
+          end: "2025-11-26 11:15",
+          color: "#00a82d",
+        },
+      ];
+
+      const layout = engine.calculateLayout(events, "2025-11-26");
+
+      expect(layout).toHaveLength(4);
+
+      const eventA = layout.find((l) => l.event.id === "A")!;
+      const eventB = layout.find((l) => l.event.id === "B")!;
+      const eventC = layout.find((l) => l.event.id === "C")!;
+      const eventD = layout.find((l) => l.event.id === "D")!;
+
+      // Column assignment with greedy algorithm (columns are reused)
+      expect(eventA.colIndex).toBe(0);
+      expect(eventB.colIndex).toBe(1);
+      expect(eventC.colIndex).toBe(0);
+      expect(eventD.colIndex).toBe(1);
+
+      // With 2 columns: offset = 100/2 = 50%
+      expect(eventA.leftPercent).toBe(0);
+      expect(eventB.leftPercent).toBe(50);
+      expect(eventC.leftPercent).toBe(0);
+      expect(eventD.leftPercent).toBe(50);
+
+      // Width multiplier for 2 cols = 1.6, baseWidth = 50 * 1.6 = 80%
+      // Col 0: min(80, 100) = 80%
+      // Col 1: min(80, 50) = 50%
+      expect(eventA.widthPercent).toBe(80);
+      expect(eventB.widthPercent).toBe(50);
+      expect(eventC.widthPercent).toBe(80);
+      expect(eventD.widthPercent).toBe(50);
+    });
+
+    it("should handle separate groups with different layouts", () => {
+      // A and B overlap (one group), C is separate (own group)
+      const events: CalendarEvent[] = [
+        {
+          id: "A",
+          title: "Event A",
+          start: "2025-11-26 10:00",
+          end: "2025-11-26 10:30",
+          color: "#2b4fff",
+        },
+        {
+          id: "B",
+          title: "Event B",
+          start: "2025-11-26 10:15",
+          end: "2025-11-26 10:45",
+          color: "#ef4444",
+        },
+        {
+          id: "C",
+          title: "Event C",
+          start: "2025-11-26 11:00",
+          end: "2025-11-26 11:30",
+          color: "#f59e0b",
+        },
+      ];
+
+      const layout = engine.calculateLayout(events, "2025-11-26");
+
+      const eventA = layout.find((l) => l.event.id === "A")!;
+      const eventB = layout.find((l) => l.event.id === "B")!;
+      const eventC = layout.find((l) => l.event.id === "C")!;
+
+      // A and B in one group, C in separate group
+      expect(eventA.colIndex).toBe(0);
+      expect(eventB.colIndex).toBe(1);
+      expect(eventC.colIndex).toBe(0);
+
+      // A and B have uniform layout (2 cols, offset=50%)
+      expect(eventA.leftPercent).toBe(0);
+      expect(eventB.leftPercent).toBe(50);
+
+      // C is alone, gets full width
+      expect(eventC.leftPercent).toBe(0);
+      expect(eventC.widthPercent).toBe(100);
+    });
+
+    it("should handle real-world Nov 26 scenario with uniform layout", () => {
+      // Real scenario: 4 events overlapping at 11:00-11:05
+      const events: CalendarEvent[] = [
+        {
+          id: "23",
+          title: "Meeting A",
+          start: "2025-11-26 10:00",
+          end: "2025-11-26 11:30",
+          color: "#2b4fff",
+        },
+        {
+          id: "24",
+          title: "Meeting B",
+          start: "2025-11-26 10:30",
+          end: "2025-11-26 12:00",
+          color: "#ef4444",
+        },
+        {
+          id: "21",
+          title: "5min Check-in",
+          start: "2025-11-26 11:00",
+          end: "2025-11-26 11:05",
+          color: "#14b8a6",
+        },
+        {
+          id: "25",
+          title: "Meeting C",
+          start: "2025-11-26 11:00",
+          end: "2025-11-26 12:30",
+          color: "#f59e0b",
+        },
+      ];
+
+      const layout = engine.calculateLayout(events, "2025-11-26");
+
+      expect(layout).toHaveLength(4);
+
+      const meetingA = layout.find((l) => l.event.id === "23")!;
+      const meetingB = layout.find((l) => l.event.id === "24")!;
+      const checkin = layout.find((l) => l.event.id === "21")!;
+      const meetingC = layout.find((l) => l.event.id === "25")!;
+
+      // 4 columns needed
+      expect(meetingA.colIndex).toBe(0);
+      expect(meetingB.colIndex).toBe(1);
+      expect(meetingC.colIndex).toBe(2);
+      expect(checkin.colIndex).toBe(3);
+
+      // 4 columns: offset = 100/4 = 25%
+      // Width multiplier for 4 cols = 1.5, baseWidth = 25 * 1.5 = 37.5%
+      const offset = 25;
+      const baseWidth = 37.5;
+      expect(meetingA.leftPercent).toBe(0);
+      expect(meetingB.leftPercent).toBe(offset);
+      expect(meetingC.leftPercent).toBe(offset * 2);
+      expect(checkin.leftPercent).toBe(offset * 3);
+
+      // Col 0: min(37.5, 100) = 37.5%
+      // Col 1: min(37.5, 75) = 37.5%
+      // Col 2: min(37.5, 50) = 37.5%
+      // Col 3: min(37.5, 25) = 25%
+      expect(meetingA.widthPercent).toBe(baseWidth);
+      expect(meetingB.widthPercent).toBe(baseWidth);
+      expect(meetingC.widthPercent).toBe(baseWidth);
+      expect(checkin.widthPercent).toBe(25); // Last column capped
     });
 
     it("should handle non-overlapping events", () => {
