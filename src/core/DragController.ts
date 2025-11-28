@@ -109,26 +109,43 @@ export class DragController<T> {
       if (target.classList.contains("tg-left")) mode = "resize-left";
       if (target.classList.contains("tg-right")) mode = "resize-right";
 
+      // Calculate click offset in days within the event's span
+      // For multi-day events, this determines which day the user clicked on
+      const startDate = this.adapter.parse(event.start);
+      const endDate = this.adapter.parse(event.end);
+      const eventDurationDays =
+        this.adapter.diff(
+          this.adapter.startOf(endDate, "day"),
+          this.adapter.startOf(startDate, "day"),
+          "day",
+        ) + 1;
+
+      // Calculate click position relative to the event element
+      const elRect = el.getBoundingClientRect();
+      const clickXInEvent = e.clientX - elRect.left;
+      const eventWidth = elRect.width || cellW; // fallback to cellW if width is 0
+
+      // Calculate which day within the event was clicked
+      // For single-day events, this will always be 0
+      const clickOffsetDays = Math.max(
+        0,
+        Math.min(
+          eventDurationDays - 1,
+          Math.floor((clickXInEvent / eventWidth) * eventDurationDays),
+        ),
+      );
+
       this.startDrag({
         type: "month",
         mode,
         event,
         startX: e.clientX,
         startY: e.clientY,
-        startDate: this.adapter.parse(event.start),
-        endDate: this.adapter.parse(event.end),
+        startDate,
+        endDate,
         cellW,
         renderCallback,
-        clickOffsetDays: Math.max(
-          0,
-          Math.min(
-            (columnCount || 7) - 1,
-            Math.floor(
-              (e.clientX - el.getBoundingClientRect().left) /
-                Math.max(cellW, 1),
-            ),
-          ),
-        ),
+        clickOffsetDays,
       });
     };
   }
@@ -687,8 +704,9 @@ export class DragController<T> {
         const ghostEndIdx = startIdx + span - 1;
 
         // Calculate top position based on events that overlap with ghost's column range
+        // Use .tg-allday-event for all-day section (not .tg-event-bar which is for month view)
         const eventBars =
-          allDayContainer.querySelectorAll<HTMLElement>(".tg-event-bar");
+          allDayContainer.querySelectorAll<HTMLElement>(".tg-allday-event");
         let maxTop = 0;
         for (const bar of eventBars) {
           // Parse the bar's left percentage to determine its start column
