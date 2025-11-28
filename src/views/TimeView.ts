@@ -53,7 +53,7 @@ export class TimeView<T = unknown> extends BaseView<T> {
       this.context.config.dateFormats,
     );
 
-    // Create renderer
+    // Create renderer with maxEventsPerRow and popover hook for all-day events
     this.renderer = new TimeRenderer<T>(
       this.engine,
       this.context.adapter,
@@ -61,6 +61,8 @@ export class TimeView<T = unknown> extends BaseView<T> {
       this.context.config.dateFormats,
       this.context.config.onStyleEvent,
       this.context.config.onRenderEvent,
+      this.context.config.view.maxEventsPerRow,
+      this.context.config.onRenderMoreEventsPopover,
     );
   }
 

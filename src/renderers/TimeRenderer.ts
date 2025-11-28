@@ -26,6 +26,10 @@ import { createElement, clearElement } from "../utils/dom";
 export class TimeRenderer<T> {
   /** Current view type being rendered (updated on each render call) */
   private currentViewType: ViewType = "week";
+  /** Currently active popover element */
+  private activePopover: HTMLElement | null = null;
+  /** Bound handler for closing popover on outside click */
+  private popoverCloseHandler: ((e: MouseEvent) => void) | null = null;
 
   constructor(
     private engine: TimeEngine<T>,
@@ -38,6 +42,13 @@ export class TimeRenderer<T> {
       event: CalendarEvent,
     ) => import("../types").EventStyle,
     private onRenderEvent?: (ctx: EventRenderContext) => void,
+    private maxEventsPerRow?: number,
+    private onRenderMoreEventsPopover?: (
+      events: CalendarEvent[],
+      date: Date,
+      anchorEl: HTMLElement,
+      defaultRender: () => void,
+    ) => void,
   ) {}
 
   /**
@@ -115,8 +126,10 @@ export class TimeRenderer<T> {
     scrollWrap.appendChild(bodyInner);
     container.appendChild(scrollWrap);
 
-    // Restore scroll position (adjust for filtered time slots)
-    setTimeout(() => {
+    // Restore scroll position synchronously after DOM insertion
+    // Using requestAnimationFrame ensures the DOM is rendered before scrolling
+    // This prevents the visual "jump" that setTimeout(0) causes
+    const restoreScroll = () => {
       if (initialScrollTop !== null && initialScrollTop !== undefined) {
         scrollWrap.scrollTop = initialScrollTop;
       } else {
@@ -129,7 +142,15 @@ export class TimeRenderer<T> {
           scrollWrap.scrollTop = targetSlotIndex * this.theme.cellHeight;
         }
       }
-    }, 0);
+    };
+
+    // Try synchronous restore first (works when container is already in DOM)
+    // Use rAF as fallback to ensure DOM is ready
+    if (container.isConnected) {
+      restoreScroll();
+    } else {
+      requestAnimationFrame(restoreScroll);
+    }
   }
 
   // ==========================================================================
@@ -206,6 +227,7 @@ export class TimeRenderer<T> {
   /**
    * Render the all-day events section below the header
    * Uses layout calculation for multi-day spanning events
+   * Supports maxEventsPerRow for collapsing events similar to month view
    */
   private renderAllDaySection(
     columns: Array<{ date: T; dateStr: string }>,
@@ -230,16 +252,55 @@ export class TimeRenderer<T> {
     // Calculate layout for all-day events
     const layout = this.engine.calculateAllDayLayout(allDayEvents, columns);
 
-    // Calculate section height based on max slot
-    const maxSlot = layout.reduce((max, item) => Math.max(max, item.slot), -1);
+    // Split layout into visible and hidden events based on maxEventsPerRow
+    const visibleLayout =
+      this.maxEventsPerRow !== undefined
+        ? layout.filter((item) => item.slot < this.maxEventsPerRow!)
+        : layout;
+
+    // Group hidden events by column index for "+N more" indicators
+    const hiddenEventsByColumn: Map<number, CalendarEvent[]> = new Map();
+    if (this.maxEventsPerRow !== undefined) {
+      for (const item of layout) {
+        if (item.slot >= this.maxEventsPerRow) {
+          // For each column the event spans, add it to hidden events
+          for (
+            let colIdx = item.startIdx;
+            colIdx < item.startIdx + item.span;
+            colIdx++
+          ) {
+            if (!hiddenEventsByColumn.has(colIdx)) {
+              hiddenEventsByColumn.set(colIdx, []);
+            }
+            // Avoid duplicates
+            const arr = hiddenEventsByColumn.get(colIdx)!;
+            if (!arr.find((e) => e.id === item.event.id)) {
+              arr.push(item.event);
+            }
+          }
+        }
+      }
+    }
+
+    // Calculate section height based on visible max slot
+    const effectiveMaxSlot = visibleLayout.reduce(
+      (max, item) => Math.max(max, item.slot),
+      -1,
+    );
     const rowHeight = 26; // Height of each all-day event row
     const padding = 8; // Top and bottom padding
-    const sectionHeight =
-      maxSlot >= 0 ? padding + (maxSlot + 1) * rowHeight : 0;
+    let sectionHeight =
+      effectiveMaxSlot >= 0 ? padding + (effectiveMaxSlot + 1) * rowHeight : 0;
+
+    // Add space for "+N more" indicator if there are hidden events
+    if (hiddenEventsByColumn.size > 0) {
+      sectionHeight += 22; // Height for the "+N more" row
+    }
+
     eventsContainer.style.height = `${Math.max(sectionHeight, 28)}px`;
 
-    // Render each all-day event bar with spanning
-    for (const item of layout) {
+    // Render visible all-day event bars
+    for (const item of visibleLayout) {
       const eventEl = this.renderAllDayEventBar(
         item,
         columns.length,
@@ -248,6 +309,19 @@ export class TimeRenderer<T> {
         onEventClick,
       );
       eventsContainer.appendChild(eventEl);
+    }
+
+    // Render "+N more" indicators for each column with hidden events
+    for (const [colIdx, hiddenEvents] of hiddenEventsByColumn) {
+      const moreEl = this.renderAllDayMoreIndicator(
+        colIdx,
+        hiddenEvents,
+        columns[colIdx]!,
+        columns.length,
+        effectiveMaxSlot,
+        onEventClick,
+      );
+      eventsContainer.appendChild(moreEl);
     }
 
     section.appendChild(eventsContainer);
@@ -375,6 +449,199 @@ export class TimeRenderer<T> {
     dragController.initMonthDrag(el, item.event, renderCallback);
 
     return el;
+  }
+
+  /**
+   * Render the "+N more" indicator for a column in all-day section
+   */
+  private renderAllDayMoreIndicator(
+    colIdx: number,
+    hiddenEvents: CalendarEvent[],
+    column: { date: T; dateStr: string },
+    columnCount: number,
+    visibleMaxSlot: number,
+    onEventClick?: (event: CalendarEvent) => void,
+  ): HTMLElement {
+    const el = createElement("div", "tg-more-indicator tg-allday-more");
+    el.textContent = `+${hiddenEvents.length} more`;
+
+    // Calculate position
+    const colWidth = 100 / columnCount;
+    const xOffset = colIdx * colWidth;
+    const yOffset = 4 + (visibleMaxSlot + 1) * 26 + 2; // Position below visible events
+
+    el.style.left = `calc(${xOffset}% + 2px)`;
+    el.style.top = `${yOffset}px`;
+    el.style.width = `calc(${colWidth}% - 4px)`;
+
+    // Convert adapter date to native Date
+    const dateObj = new Date(
+      this.adapter.year(column.date),
+      this.adapter.month(column.date),
+      this.adapter.date(column.date),
+    );
+
+    // Click handler for popover
+    el.addEventListener("click", (e) => {
+      e.stopPropagation();
+
+      const defaultRender = () => {
+        this.renderDefaultPopover(el, hiddenEvents, dateObj, onEventClick);
+      };
+
+      if (this.onRenderMoreEventsPopover) {
+        this.onRenderMoreEventsPopover(
+          hiddenEvents,
+          dateObj,
+          el,
+          defaultRender,
+        );
+      } else {
+        defaultRender();
+      }
+    });
+
+    return el;
+  }
+
+  /**
+   * Render the default popover for hidden events
+   */
+  private renderDefaultPopover(
+    anchorEl: HTMLElement,
+    events: CalendarEvent[],
+    date: Date,
+    onEventClick?: (event: CalendarEvent) => void,
+  ): void {
+    // Close any existing popover
+    this.closePopover();
+
+    // Create popover container
+    const popover = createElement("div", "tg-more-popover");
+    this.activePopover = popover;
+
+    // Header with date
+    const header = createElement("div", "tg-more-popover-header");
+    header.textContent = date.toLocaleDateString(undefined, {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+    });
+    popover.appendChild(header);
+
+    // Event list
+    const list = createElement("div", "tg-more-popover-list");
+    for (const event of events) {
+      const item = createElement("div", "tg-more-popover-item");
+
+      // Apply custom styling if hook is provided
+      let dotColor = event.color || "#3b82f6";
+      let customOpacity: number | undefined;
+
+      if (this.onStyleEvent) {
+        const style = this.onStyleEvent(event);
+        if (style.className) {
+          item.classList.add(style.className);
+        }
+        if (style.color) {
+          dotColor = style.color;
+        }
+        if (style.opacity !== undefined) {
+          customOpacity = style.opacity;
+        }
+      }
+
+      // Color indicator
+      const colorDot = createElement("span", "tg-more-popover-dot");
+      colorDot.style.backgroundColor = dotColor;
+      item.appendChild(colorDot);
+
+      // Title
+      const title = createElement("span", "tg-more-popover-title");
+      title.textContent = event.title;
+      item.appendChild(title);
+
+      // Apply opacity to the whole item if specified
+      if (customOpacity !== undefined) {
+        item.style.opacity = customOpacity.toString();
+      }
+
+      // Click handler
+      if (onEventClick) {
+        item.addEventListener("click", (e) => {
+          e.stopPropagation();
+          this.closePopover();
+          onEventClick(event);
+        });
+        item.style.cursor = "pointer";
+      }
+
+      list.appendChild(item);
+    }
+    popover.appendChild(list);
+
+    // Position the popover
+    document.body.appendChild(popover);
+    this.positionPopover(popover, anchorEl);
+
+    // Set up close handler
+    this.popoverCloseHandler = (e: MouseEvent) => {
+      if (!popover.contains(e.target as Node) && e.target !== anchorEl) {
+        this.closePopover();
+      }
+    };
+
+    // Delay adding the click listener to prevent immediate close
+    setTimeout(() => {
+      document.addEventListener("click", this.popoverCloseHandler!);
+    }, 0);
+  }
+
+  /**
+   * Position the popover relative to the anchor element
+   */
+  private positionPopover(popover: HTMLElement, anchorEl: HTMLElement): void {
+    const anchorRect = anchorEl.getBoundingClientRect();
+    const popoverRect = popover.getBoundingClientRect();
+    const viewportHeight = window.innerHeight;
+    const viewportWidth = window.innerWidth;
+
+    // Default: position below the anchor
+    let top = anchorRect.bottom + 4;
+    let left = anchorRect.left;
+
+    // Adjust if popover would go off the bottom
+    if (top + popoverRect.height > viewportHeight - 8) {
+      top = anchorRect.top - popoverRect.height - 4;
+    }
+
+    // Adjust if popover would go off the right
+    if (left + popoverRect.width > viewportWidth - 8) {
+      left = viewportWidth - popoverRect.width - 8;
+    }
+
+    // Ensure popover doesn't go off the left
+    if (left < 8) {
+      left = 8;
+    }
+
+    popover.style.top = `${top}px`;
+    popover.style.left = `${left}px`;
+  }
+
+  /**
+   * Close the active popover
+   */
+  private closePopover(): void {
+    if (this.activePopover) {
+      this.activePopover.remove();
+      this.activePopover = null;
+    }
+
+    if (this.popoverCloseHandler) {
+      document.removeEventListener("click", this.popoverCloseHandler);
+      this.popoverCloseHandler = null;
+    }
   }
 
   private renderTimeAxis(
