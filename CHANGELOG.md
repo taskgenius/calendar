@@ -5,6 +5,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.13.0]
+
+### ✨ Features
+
+- **All-day section event limiting**: Support `maxEventsPerRow` config for week/day views
+  - Limits visible all-day events to specified count
+  - Shows "+N more" indicator when events exceed limit
+  - Click indicator to view hidden events in popover
+  - Support `onRenderMoreEventsPopover` hook for custom popover rendering
+
+### 🐛 Bug Fixes
+
+- **Multi-day event click offset**: Fix click offset calculation for multi-day events during drag
+  - Calculate position relative to actual event element width
+  - Correctly determine which day within the event was clicked
+
+- **All-day ghost positioning**: Use correct `.tg-allday-event` selector instead of `.tg-event-bar`
+  - Fixes ghost element vertical positioning in week/day view all-day section
+
+- **Scroll restoration**: Use `requestAnimationFrame` instead of `setTimeout(0)` for scroll position restoration
+  - Prevents visual "jump" when re-rendering time views
+
+### 🏗️ Code Quality
+
+- **Calendar.ts formatting**: Standardize indentation to 2 spaces for consistency
+
+### 🧪 Testing
+
+- Add ghost position integration tests for multi-day event drag operations
+
 ## [0.12.1]
 
 ### 🐛 Bug Fixes
