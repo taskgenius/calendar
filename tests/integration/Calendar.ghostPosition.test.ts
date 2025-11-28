@@ -593,4 +593,353 @@ describe("Ghost element positioning during drag", () => {
       );
     });
   });
+
+  describe("All-day section ghost positioning in week/day views", () => {
+    const mockAllDayContainerRect = (container: HTMLElement, width: number) => {
+      vi.spyOn(container, "getBoundingClientRect").mockReturnValue({
+        width,
+        height: 60,
+        top: 100,
+        left: 60,
+        right: width + 60,
+        bottom: 160,
+        x: 60,
+        y: 100,
+        toJSON: () => ({}),
+      } as DOMRect);
+      Object.defineProperty(container, "offsetWidth", {
+        value: width,
+        configurable: true,
+      });
+    };
+
+    it("renders ghost in all-day section with correct width percentage", () => {
+      const events: CalendarEvent[] = [
+        {
+          id: "evt-allday",
+          title: "All Day Event",
+          start: "2025-11-17",
+          end: "2025-11-17",
+          allDay: true,
+        },
+      ];
+
+      calendar = new Calendar("#ghost-test-calendar", {
+        view: { type: "week" },
+        events,
+      });
+
+      calendar.goToDate("2025-11-17");
+
+      const allDayContainer = container.querySelector(
+        ".tg-allday-events-container",
+      ) as HTMLElement;
+      if (!allDayContainer) return;
+
+      mockAllDayContainerRect(allDayContainer, 700);
+      stubElementFromPoint(allDayContainer);
+
+      const eventEl = container.querySelector(
+        '[data-eid="evt-allday"]',
+      ) as HTMLElement;
+      if (!eventEl) return;
+
+      eventEl.dispatchEvent(
+        new MouseEvent("mousedown", {
+          bubbles: true,
+          clientX: 160,
+          clientY: 120,
+          button: 0,
+        }),
+      );
+
+      document.dispatchEvent(
+        new MouseEvent("mousemove", {
+          bubbles: true,
+          clientX: 260,
+          clientY: 120,
+        }),
+      );
+
+      const ghost = container.querySelector(".tg-ghost-event") as HTMLElement;
+      expect(ghost).not.toBeNull();
+
+      if (ghost) {
+        // Ghost should use percentage-based width
+        const widthMatch = ghost.style.width.match(/calc\(\s*([\d.]+)%/);
+        expect(widthMatch).not.toBeNull();
+        if (widthMatch) {
+          const widthPct = parseFloat(widthMatch[1]);
+          // Single day event should be approximately 100/7 ≈ 14.2857% wide
+          expect(widthPct).toBeCloseTo(100 / 7, 1);
+        }
+      }
+
+      // Cleanup
+      document.dispatchEvent(
+        new MouseEvent("mouseup", {
+          bubbles: true,
+          clientX: 260,
+          clientY: 120,
+        }),
+      );
+    });
+
+    it("positions ghost below overlapping all-day events using .tg-allday-event selector", () => {
+      const events: CalendarEvent[] = [
+        {
+          id: "evt-existing",
+          title: "Existing All Day",
+          start: "2025-11-17",
+          end: "2025-11-19",
+          allDay: true,
+        },
+        {
+          id: "evt-drag",
+          title: "Drag Me",
+          start: "2025-11-20",
+          end: "2025-11-20",
+          allDay: true,
+        },
+      ];
+
+      calendar = new Calendar("#ghost-test-calendar", {
+        view: { type: "week" },
+        events,
+      });
+
+      calendar.goToDate("2025-11-17");
+
+      const allDayContainer = container.querySelector(
+        ".tg-allday-events-container",
+      ) as HTMLElement;
+      if (!allDayContainer) return;
+
+      mockAllDayContainerRect(allDayContainer, 700);
+      stubElementFromPoint(allDayContainer);
+
+      // Mock the existing event's position and dimensions
+      const existingEvent = container.querySelector(
+        '[data-eid="evt-existing"]',
+      ) as HTMLElement;
+      if (existingEvent) {
+        Object.defineProperty(existingEvent, "offsetHeight", {
+          value: 22,
+          configurable: true,
+        });
+      }
+
+      const eventEl = container.querySelector(
+        '[data-eid="evt-drag"]',
+      ) as HTMLElement;
+      if (!eventEl) return;
+
+      eventEl.dispatchEvent(
+        new MouseEvent("mousedown", {
+          bubbles: true,
+          clientX: 500,
+          clientY: 120,
+          button: 0,
+        }),
+      );
+
+      // Move to overlap with evt-existing (Monday-Wednesday)
+      document.dispatchEvent(
+        new MouseEvent("mousemove", {
+          bubbles: true,
+          clientX: 200, // Tuesday position
+          clientY: 120,
+        }),
+      );
+
+      const ghost = container.querySelector(".tg-ghost-event") as HTMLElement;
+      expect(ghost).not.toBeNull();
+
+      if (ghost) {
+        // Ghost should be positioned below existing event
+        const topValue = parseFloat(ghost.style.top);
+        // Should be greater than 0 since there's an existing event
+        expect(topValue).toBeGreaterThanOrEqual(4);
+      }
+
+      // Cleanup
+      document.dispatchEvent(
+        new MouseEvent("mouseup", {
+          bubbles: true,
+          clientX: 200,
+          clientY: 120,
+        }),
+      );
+    });
+
+    it("uses getComputedStyle to read --tg-allday-columns CSS variable", () => {
+      const events: CalendarEvent[] = [
+        {
+          id: "evt-5day",
+          title: "5 Day Week Event",
+          start: "2025-11-17",
+          end: "2025-11-17",
+          allDay: true,
+        },
+      ];
+
+      calendar = new Calendar("#ghost-test-calendar", {
+        view: { type: "week" },
+        events,
+      });
+
+      calendar.goToDate("2025-11-17");
+
+      const allDayContainer = container.querySelector(
+        ".tg-allday-events-container",
+      ) as HTMLElement;
+      if (!allDayContainer) return;
+
+      // Set CSS variable to 5 columns (5-day work week)
+      allDayContainer.style.setProperty("--tg-allday-columns", "5");
+      mockAllDayContainerRect(allDayContainer, 500); // 100px per column
+      stubElementFromPoint(allDayContainer);
+
+      const eventEl = container.querySelector(
+        '[data-eid="evt-5day"]',
+      ) as HTMLElement;
+      if (!eventEl) return;
+
+      eventEl.dispatchEvent(
+        new MouseEvent("mousedown", {
+          bubbles: true,
+          clientX: 160,
+          clientY: 120,
+          button: 0,
+        }),
+      );
+
+      document.dispatchEvent(
+        new MouseEvent("mousemove", {
+          bubbles: true,
+          clientX: 260,
+          clientY: 120,
+        }),
+      );
+
+      const ghost = container.querySelector(".tg-ghost-event") as HTMLElement;
+      expect(ghost).not.toBeNull();
+
+      if (ghost) {
+        // Ghost width should be based on 5 columns (100/5 = 20%)
+        const widthMatch = ghost.style.width.match(/calc\(\s*([\d.]+)%/);
+        expect(widthMatch).not.toBeNull();
+        if (widthMatch) {
+          const widthPct = parseFloat(widthMatch[1]);
+          // Single day event should be 20% wide for 5-column layout
+          expect(widthPct).toBeCloseTo(20, 1);
+        }
+      }
+
+      // Cleanup
+      document.dispatchEvent(
+        new MouseEvent("mouseup", {
+          bubbles: true,
+          clientX: 260,
+          clientY: 120,
+        }),
+      );
+    });
+
+    it("scopes day column lookup to current calendar instance", () => {
+      // Create a second calendar container to test cross-calendar isolation
+      const container2 = document.createElement("div");
+      container2.id = "ghost-test-calendar-2";
+      document.body.appendChild(container2);
+
+      const events: CalendarEvent[] = [
+        {
+          id: "evt-cal1",
+          title: "Calendar 1 Event",
+          start: "2025-11-17",
+          end: "2025-11-17",
+          allDay: true,
+        },
+      ];
+
+      calendar = new Calendar("#ghost-test-calendar", {
+        view: { type: "week" },
+        events,
+      });
+
+      // Create second calendar with different date
+      const calendar2 = new Calendar("#ghost-test-calendar-2", {
+        view: { type: "week" },
+        events: [
+          {
+            id: "evt-cal2",
+            title: "Calendar 2 Event",
+            start: "2025-12-01",
+            end: "2025-12-01",
+            allDay: true,
+          },
+        ],
+      });
+
+      calendar.goToDate("2025-11-17");
+      calendar2.goToDate("2025-12-01");
+
+      const allDayContainer = container.querySelector(
+        ".tg-allday-events-container",
+      ) as HTMLElement;
+      if (!allDayContainer) {
+        calendar2.destroy();
+        container2.remove();
+        return;
+      }
+
+      mockAllDayContainerRect(allDayContainer, 700);
+      stubElementFromPoint(allDayContainer);
+
+      const eventEl = container.querySelector(
+        '[data-eid="evt-cal1"]',
+      ) as HTMLElement;
+      if (!eventEl) {
+        calendar2.destroy();
+        container2.remove();
+        return;
+      }
+
+      eventEl.dispatchEvent(
+        new MouseEvent("mousedown", {
+          bubbles: true,
+          clientX: 160,
+          clientY: 120,
+          button: 0,
+        }),
+      );
+
+      document.dispatchEvent(
+        new MouseEvent("mousemove", {
+          bubbles: true,
+          clientX: 260,
+          clientY: 120,
+        }),
+      );
+
+      // Ghost should appear in the first calendar, not the second
+      const ghost1 = container.querySelector(".tg-ghost-event");
+      const ghost2 = container2.querySelector(".tg-ghost-event");
+
+      // The ghost should be scoped to the first calendar's all-day container
+      expect(ghost1).not.toBeNull();
+      expect(ghost2).toBeNull();
+
+      // Cleanup
+      document.dispatchEvent(
+        new MouseEvent("mouseup", {
+          bubbles: true,
+          clientX: 260,
+          clientY: 120,
+        }),
+      );
+      calendar2.destroy();
+      container2.remove();
+    });
+  });
 });
