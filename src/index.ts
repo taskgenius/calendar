@@ -5,8 +5,39 @@
  * with drag-and-drop support and extensible view system.
  */
 
-// Main Calendar class
-export { Calendar } from "./core/Calendar";
+// Main Calendar class (batteries-included)
+import {
+  Calendar as CalendarCore,
+  type ExtendedCalendarConfig,
+} from "./core/Calendar";
+import { ViewRegistry, MonthView, WeekView, DayView } from "./views";
+
+/**
+ * Default Calendar exports with built-in views pre-registered for
+ * backward compatibility. Use `CalendarCore` for tree-shaking +
+ * manual view registration.
+ */
+export class Calendar<T = Date> extends CalendarCore<T> {
+  constructor(
+    containerSelector: string | HTMLElement,
+    config: ExtendedCalendarConfig = {},
+  ) {
+    const registry = config.viewRegistry ?? new ViewRegistry();
+    const requestedView = config.view?.type ?? "week";
+
+    // Ensure built-in views exist when requested or when registry is empty
+    if (registry.size === 0 || !registry.has(requestedView)) {
+      if (!registry.has("month")) registry.register(MonthView);
+      if (!registry.has("week")) registry.register(WeekView);
+      if (!registry.has("day")) registry.register(DayView);
+    }
+
+    super(containerSelector, { ...config, viewRegistry: registry });
+  }
+}
+
+// Tree-shakeable core (manual view registration)
+export { CalendarCore };
 export type { ExtendedCalendarConfig } from "./core/Calendar";
 
 // Core utilities
