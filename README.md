@@ -62,6 +62,59 @@ const calendar2 = new Calendar(container, {
 });
 ```
 
+## 🌲 Tree Shaking & Optimization
+
+For users who want to minimize bundle size, you can use `CalendarCore` instead of `Calendar`. The `CalendarCore` class does not import any built-in views by default, allowing your bundler to exclude unused view code.
+
+### Using Calendar (Recommended)
+
+The default `Calendar` class provides a "batteries-included" experience with automatic view registration:
+
+```typescript
+import { Calendar } from '@taskgenius/calendar';
+import '@taskgenius/calendar/styles.css';
+
+// All built-in views (Month, Week, Day) are automatically available
+const calendar = new Calendar('#app', {
+  view: { type: 'month' }
+});
+```
+
+### Using CalendarCore (Advanced - Smaller Bundle)
+
+For optimal bundle size, use `CalendarCore` with explicit view registration:
+
+```typescript
+import { CalendarCore, MonthView, ViewRegistry } from '@taskgenius/calendar';
+import '@taskgenius/calendar/styles.css';
+
+// Only imports MonthView code - Week and Day views are tree-shaken
+const calendar = new CalendarCore('#app', {
+  view: { type: 'month' },
+  viewRegistry: new ViewRegistry().register(MonthView)
+});
+```
+
+**Multiple views example:**
+
+```typescript
+import { CalendarCore, MonthView, WeekView, ViewRegistry } from '@taskgenius/calendar';
+
+const registry = new ViewRegistry()
+  .register(MonthView)
+  .register(WeekView);
+
+const calendar = new CalendarCore('#app', {
+  view: { type: 'week' },
+  viewRegistry: registry
+});
+```
+
+### When to Use Each
+
+- **Use `Calendar`**: Quick start, prototyping, or when bundle size is not a concern
+- **Use `CalendarCore`**: Production builds where bundle optimization is important
+
 ## 🎨 Styles
 
 **⚠️ Important**: The component **requires** `@taskgenius/calendar/styles.css` to render correctly. Since v0.4.0, all layout and styling use external CSS classes instead of inline styles.
@@ -78,7 +131,9 @@ const calendar2 = new Calendar(container, {
 
 ### Calendar Class
 
-The main entry point for the calendar component.
+The main entry point for the calendar component. This class extends `CalendarCore` and automatically registers all built-in views (Month, Week, Day) for a "batteries-included" experience. Perfect for quick starts and when bundle size is not a primary concern.
+
+**For advanced users**: Use `CalendarCore` directly for a leaner, tree-shakeable version that requires manual view registration. See the [Tree Shaking & Optimization](#-tree-shaking--optimization) section for details.
 
 #### Constructor
 

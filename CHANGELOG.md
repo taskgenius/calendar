@@ -5,6 +5,79 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.15.0] - 2025-11-29
+
+### ⚠️ BREAKING CHANGES
+
+- **Calendar class now auto-registers built-in views**: The default `Calendar` class extends `CalendarCore` and automatically imports all built-in views (Month, Week, Day) for a "batteries-included" experience. This ensures backward compatibility but may increase bundle size.
+
+### ✨ Features
+
+- **New `CalendarCore` export**: Dedicated tree-shakeable foundation class for manual view registration
+  - Does not import any views by default
+  - Perfect for advanced users optimizing bundle size
+  - Allows importing only the views you need (e.g., just `MonthView`, `WeekView`, or `DayView`)
+  - Requires explicit view registration via `viewRegistry` parameter
+
+- **Enhanced `Calendar` class**: Restored "batteries-included" experience as wrapper around `CalendarCore`
+  - Now extends `CalendarCore` instead of being the core implementation
+  - Automatically registers `MonthView`, `WeekView`, and `DayView` when needed
+  - Ensures requested view type is always registered (backward compatible)
+  - Zero configuration needed for standard usage scenarios
+  - Fully backward compatible with v0.13.x and earlier
+
+- **Factory function architecture update**: All factory functions now utilize the new `Calendar` wrapper
+  - `createCalendar()`, `createMonthCalendar()`, `createWeekCalendar()`, `createDayCalendar()` use auto-registration
+  - `registerBuiltInViews()` helper available for manual registration scenarios
+
+### 🏗️ Architecture
+
+- **Separation of Concerns**: Clear architectural distinction between convenience and optimization
+  - `Calendar`: Ease of use, quick start, full features, auto-registration
+  - `CalendarCore`: Performance-first, tree-shaking friendly, manual composition
+  - Allows users to choose the right entry point for their needs
+
+- **Smart View Registration Logic**: Automatic view registration with intelligent fallbacks
+  - Checks if requested view type exists in registry before adding built-in views
+  - Only registers missing built-in views when needed
+  - Respects custom registries provided by users
+
+### 📦 Exports
+
+- New export: `CalendarCore` - tree-shakeable core class
+- Updated export: `Calendar` - now extends `CalendarCore` with auto-registration
+- Export type: `ExtendedCalendarConfig` - configuration interface with `viewRegistry` option
+
+### 📚 Documentation
+
+- Added comprehensive JSDoc comments explaining `Calendar` vs `CalendarCore` distinction
+- Updated README with "Tree Shaking & Optimization" guide
+- Clarified when to use `Calendar` (most users) vs `CalendarCore` (bundle optimization)
+- Added code examples for both usage patterns
+
+### 🔄 Migration Guide
+
+**No breaking changes for existing users**: If you were using `Calendar` with factory functions or default setup, everything works exactly as before.
+
+**For tree-shaking optimization** (optional, new feature):
+
+```typescript
+// Before (v0.14.0 and earlier): Calendar with all views
+import { Calendar } from '@taskgenius/calendar';
+const calendar = new Calendar('#app', { view: { type: 'month' } });
+
+// After (v0.15.0): Same behavior (recommended for most users)
+import { Calendar } from '@taskgenius/calendar';
+const calendar = new Calendar('#app', { view: { type: 'month' } });
+
+// After (v0.15.0): Tree-shakeable option (advanced users)
+import { CalendarCore, MonthView, ViewRegistry } from '@taskgenius/calendar';
+const calendar = new CalendarCore('#app', {
+  view: { type: 'month' },
+  viewRegistry: new ViewRegistry().register(MonthView)
+});
+```
+
 ## [0.14.0]
 
 ### ✨ Features
