@@ -5,6 +5,43 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.14.0]
+
+### ✨ Features
+
+- **New `createCalendar()` factory function**: Recommended entry point for batteries-included setup
+  - Automatically registers all built-in views (Month, Week, Day)
+  - Uses NativeDateAdapter by default
+  - Provides the same experience as the pre-0.11.0 `new Calendar()` behavior
+  - Available from both `@taskgenius/calendar` and `@taskgenius/calendar/presets`
+
+- **Tree-shaking optimization**: `Calendar` class is now tree-shake friendly
+  - Core `Calendar` class no longer statically imports built-in views
+  - Consumers can import only the views they need for smaller bundle sizes
+  - Use `createCalendar()` for convenience, or manual `ViewRegistry` setup for optimization
+
+### 🐛 Bug Fixes
+
+- **Clear error messages for missing views**: `new Calendar()` without registered views now throws a helpful error
+  - Error message includes code example showing how to fix the issue
+  - Suggests using `createCalendar()` for quick setup
+  - Prevents silent "black screen" failures
+
+### 📦 Exports
+
+- New export: `createCalendar` factory function
+- All factory functions (`createCalendar`, `createFullCalendar`, `createMonthCalendar`, `createWeekCalendar`, `createDayCalendar`, `registerBuiltInViews`) available from main entry point
+
+### 📚 Documentation
+
+- Add usage examples for both convenience and tree-shaking modes
+- Document `createCalendar()` as the recommended entry point for most users
+
+### 🧪 Testing
+
+- Add test helper `createTestCalendar()` for consistent test setup
+- All 252 tests passing
+
 ## [0.13.1]
 
 ### ✨ Features

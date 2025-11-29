@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { Calendar } from "../../src/core/Calendar";
 import type { CalendarEvent } from "../../src/types";
+import { createTestCalendar } from "../helpers/createTestCalendar";
 
 describe("Calendar Integration", () => {
   let container: HTMLDivElement;
@@ -21,26 +22,26 @@ describe("Calendar Integration", () => {
 
   describe("initialization", () => {
     it("should create calendar with default config", () => {
-      calendar = new Calendar("#test-calendar");
+      calendar = createTestCalendar("#test-calendar");
 
       expect(container.querySelector(".tg-calendar")).toBeTruthy();
       expect(calendar.getView()).toBe("week");
     });
 
     it("should create calendar with HTMLElement", () => {
-      calendar = new Calendar(container);
+      calendar = createTestCalendar(container);
 
       expect(container.querySelector(".tg-calendar")).toBeTruthy();
     });
 
     it("should throw error for invalid selector", () => {
-      expect(() => new Calendar("#non-existent")).toThrow(
+      expect(() => createTestCalendar("#non-existent")).toThrow(
         "Calendar container not found",
       );
     });
 
     it("should initialize with custom view", () => {
-      calendar = new Calendar("#test-calendar", {
+      calendar = createTestCalendar("#test-calendar", {
         view: { type: "month" },
       });
 
@@ -57,7 +58,7 @@ describe("Calendar Integration", () => {
         },
       ];
 
-      calendar = new Calendar("#test-calendar", { events });
+      calendar = createTestCalendar("#test-calendar", { events });
 
       expect(calendar.getEvents()).toHaveLength(1);
     });
@@ -65,7 +66,7 @@ describe("Calendar Integration", () => {
 
   describe("view switching", () => {
     beforeEach(() => {
-      calendar = new Calendar("#test-calendar");
+      calendar = createTestCalendar("#test-calendar");
     });
 
     it("should switch to month view", () => {
@@ -93,7 +94,7 @@ describe("Calendar Integration", () => {
     it("should call onViewChange callback", () => {
       let viewChanged: string | undefined;
 
-      calendar = new Calendar("#test-calendar", {
+      calendar = createTestCalendar("#test-calendar", {
         onViewChange: (view) => {
           viewChanged = view;
         },
@@ -106,7 +107,7 @@ describe("Calendar Integration", () => {
 
   describe("navigation", () => {
     beforeEach(() => {
-      calendar = new Calendar("#test-calendar");
+      calendar = createTestCalendar("#test-calendar");
     });
 
     it("should navigate to next period", () => {
@@ -138,9 +139,9 @@ describe("Calendar Integration", () => {
     });
 
     it("should call onDateChange callback", () => {
-      let dateChanged: string | undefined;
+      let dateChanged: Date | undefined;
 
-      calendar = new Calendar("#test-calendar", {
+      calendar = createTestCalendar("#test-calendar", {
         onDateChange: (date) => {
           dateChanged = date;
         },
@@ -153,7 +154,7 @@ describe("Calendar Integration", () => {
 
   describe("event management", () => {
     beforeEach(() => {
-      calendar = new Calendar("#test-calendar");
+      calendar = createTestCalendar("#test-calendar");
     });
 
     it("should add event", () => {
@@ -227,7 +228,7 @@ describe("Calendar Integration", () => {
 
   describe("rendering", () => {
     it("should render header with title", () => {
-      calendar = new Calendar("#test-calendar");
+      calendar = createTestCalendar("#test-calendar");
 
       const title = container.querySelector(".tg-title");
       expect(title).toBeTruthy();
@@ -235,21 +236,21 @@ describe("Calendar Integration", () => {
     });
 
     it("should render view switch buttons", () => {
-      calendar = new Calendar("#test-calendar");
+      calendar = createTestCalendar("#test-calendar");
 
       const buttons = container.querySelectorAll(".tg-view-btn");
       expect(buttons).toHaveLength(3);
     });
 
     it("should render navigation buttons", () => {
-      calendar = new Calendar("#test-calendar");
+      calendar = createTestCalendar("#test-calendar");
 
       const navButtons = container.querySelectorAll(".tg-nav-btn");
       expect(navButtons).toHaveLength(3);
     });
 
     it("should re-render on refresh", () => {
-      calendar = new Calendar("#test-calendar");
+      calendar = createTestCalendar("#test-calendar");
 
       const initialHTML = container.innerHTML;
       calendar.refresh();
@@ -259,7 +260,7 @@ describe("Calendar Integration", () => {
     });
 
     it("should render header with default format for month view", () => {
-      calendar = new Calendar("#test-calendar", {
+      calendar = createTestCalendar("#test-calendar", {
         view: { type: "month" },
       });
       calendar.goToDate("2025-11-20");
@@ -270,7 +271,7 @@ describe("Calendar Integration", () => {
     });
 
     it("should render header with default format for day view", () => {
-      calendar = new Calendar("#test-calendar", {
+      calendar = createTestCalendar("#test-calendar", {
         view: { type: "day" },
       });
       calendar.goToDate("2025-11-20");
@@ -282,7 +283,7 @@ describe("Calendar Integration", () => {
     });
 
     it("should render header with custom format", () => {
-      calendar = new Calendar("#test-calendar", {
+      calendar = createTestCalendar("#test-calendar", {
         view: { type: "month" },
         headerFormat: {
           month: "YYYY-MM",
@@ -295,7 +296,7 @@ describe("Calendar Integration", () => {
     });
 
     it("should use different formats for different views", () => {
-      calendar = new Calendar("#test-calendar", {
+      calendar = createTestCalendar("#test-calendar", {
         view: { type: "month" },
         headerFormat: {
           month: "YYYY-MM",
@@ -315,7 +316,7 @@ describe("Calendar Integration", () => {
 
   describe("cleanup", () => {
     it("should destroy calendar properly", () => {
-      calendar = new Calendar("#test-calendar");
+      calendar = createTestCalendar("#test-calendar");
       calendar.destroy();
 
       expect(container.innerHTML).toBe("");
@@ -327,7 +328,7 @@ describe("Calendar Integration", () => {
     it("should call onEventClick when event is clicked", () => {
       let clickedEvent: CalendarEvent | undefined;
 
-      calendar = new Calendar("#test-calendar", {
+      calendar = createTestCalendar("#test-calendar", {
         view: { type: "week" },
         events: [
           {

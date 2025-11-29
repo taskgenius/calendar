@@ -1,6 +1,6 @@
 {
   "name": "@taskgenius/calendar",
-  "version": "0.13.1",
+  "version": "0.14.0",
   "description": "A lightweight, configurable TypeScript calendar component with drag-and-drop support",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -29,6 +29,11 @@
     },
     "./styles.css": {
       "default": "./dist/styles.css"
+    },
+    "./presets": {
+      "types": "./dist/presets.d.ts",
+      "import": "./dist/presets.js",
+      "require": "./dist/presets.cjs"
     }
   },
   "files": [
@@ -98,5 +103,9 @@
   "bugs": {
     "url": "https://github.com/taskgenius/calendar/issues"
   },
-  "homepage": "https://github.com/taskgenius/calendar#readme"
+  "homepage": "https://github.com/taskgenius/calendar#readme",
+  "sideEffects": [
+    "*.css",
+    "./dist/styles.css"
+  ]
 }

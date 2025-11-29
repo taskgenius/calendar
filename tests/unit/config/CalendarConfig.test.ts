@@ -1,13 +1,14 @@
 /**
  * Calendar configuration tests
  */
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { Calendar } from "../../../src/core/Calendar";
+import { createTestCalendar } from "../../helpers/createTestCalendar";
 
 describe("CalendarConfig - New Features", () => {
   it("should apply default values for new config options", () => {
     const container = document.createElement("div");
-    const calendar = new Calendar(container, {});
+    const calendar = createTestCalendar(container, {});
 
     // @ts-expect-error accessing private field for testing
     const config = calendar.config;
@@ -20,7 +21,7 @@ describe("CalendarConfig - New Features", () => {
 
   it("should accept custom firstDayOfWeek configuration", () => {
     const container = document.createElement("div");
-    const calendar = new Calendar(container, {
+    const calendar = createTestCalendar(container, {
       view: {
         type: "week",
         firstDayOfWeek: 1, // Monday
@@ -35,7 +36,7 @@ describe("CalendarConfig - New Features", () => {
 
   it("should accept showWeekends: false configuration", () => {
     const container = document.createElement("div");
-    const calendar = new Calendar(container, {
+    const calendar = createTestCalendar(container, {
       view: {
         type: "month",
         showWeekends: false,
@@ -50,7 +51,7 @@ describe("CalendarConfig - New Features", () => {
 
   it("should accept dateOnly drag configuration", () => {
     const container = document.createElement("div");
-    const calendar = new Calendar(container, {
+    const calendar = createTestCalendar(container, {
       draggable: {
         enabled: true,
         dateOnly: true,
@@ -65,7 +66,7 @@ describe("CalendarConfig - New Features", () => {
 
   it("should accept showEventCounts configuration", () => {
     const container = document.createElement("div");
-    const calendar = new Calendar(container, {
+    const calendar = createTestCalendar(container, {
       showEventCounts: true,
     });
 
@@ -80,7 +81,7 @@ describe("CalendarConfig - New Features", () => {
     const onRenderDateCell = vi.fn();
     const onStyleEvent = vi.fn();
 
-    const calendar = new Calendar(container, {
+    const calendar = createTestCalendar(container, {
       onRenderDateCell,
       onStyleEvent,
     });
@@ -94,7 +95,7 @@ describe("CalendarConfig - New Features", () => {
 
   it("should apply default headerFormat values", () => {
     const container = document.createElement("div");
-    const calendar = new Calendar(container, {});
+    const calendar = createTestCalendar(container, {});
 
     // @ts-expect-error accessing private field for testing
     const config = calendar.config;
@@ -106,7 +107,7 @@ describe("CalendarConfig - New Features", () => {
 
   it("should accept custom headerFormat configuration", () => {
     const container = document.createElement("div");
-    const calendar = new Calendar(container, {
+    const calendar = createTestCalendar(container, {
       headerFormat: {
         month: "MMMM yyyy",
         day: "MMMM d, yyyy",
@@ -122,7 +123,7 @@ describe("CalendarConfig - New Features", () => {
 
   it("should accept partial headerFormat configuration", () => {
     const container = document.createElement("div");
-    const calendar = new Calendar(container, {
+    const calendar = createTestCalendar(container, {
       headerFormat: {
         month: "YYYY/MM",
       },

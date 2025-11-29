@@ -33,8 +33,8 @@ export {
   // Base classes
   BaseView,
   ViewRegistry,
-  defaultViewRegistry,
-  // Built-in views
+  createViewRegistry,
+  // Built-in views (imported on-demand for tree-shaking)
   MonthView,
   TimeView,
   WeekView,
@@ -52,7 +52,7 @@ export type {
 // Styles
 export { applyThemeVariables, clearThemeVariables } from "./styles";
 
-// Preset utilities
+// Filter/Format preset utilities
 export {
   hideWeekends,
   hideWeekdays,
@@ -66,6 +66,18 @@ export {
   customTimeLabels,
   formatCompact,
 } from "./utils/presets";
+
+// Factory presets for quick setup (includes all views)
+// For tree-shaking optimization, use Calendar directly with manual view registration
+export {
+  createCalendar,
+  createFullCalendar,
+  createMonthCalendar,
+  createWeekCalendar,
+  createDayCalendar,
+  registerBuiltInViews,
+} from "./presets";
+export type { FullCalendarConfig } from "./presets";
 
 // Types
 export type {

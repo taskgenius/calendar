@@ -6,7 +6,6 @@
  * - Custom view registration
  * - View class extension via standard inheritance
  */
-import type { Dayjs } from "dayjs";
 import type {
   CalendarConfig,
   CalendarEvent,
@@ -14,7 +13,7 @@ import type {
   ResolvedCalendarConfig,
   DateAdapter,
 } from "../types";
-import { DayJsAdapter } from "../adapters/DayJsAdapter";
+import { NativeDateAdapter } from "../adapters/NativeDateAdapter";
 import { DragController } from "./DragController";
 import { EventManager } from "./EventManager";
 import { InteractionController } from "./InteractionController";
@@ -23,11 +22,7 @@ import { createElement, clearElement } from "../utils/dom";
 import { DEFAULT_DATE_FORMATS, INTERNAL_DATA_FORMAT } from "../constants";
 import {
   ViewRegistry,
-  defaultViewRegistry,
   BaseView,
-  MonthView,
-  WeekView,
-  DayView,
   type ViewContext,
   type ViewMeta,
   type ViewClass,
@@ -40,14 +35,9 @@ import {
 export interface ExtendedCalendarConfig extends CalendarConfig {
   /**
    * Custom view registry instance
-   * If not provided, uses the default global registry
+   * If not provided, creates a new empty registry
    */
   viewRegistry?: ViewRegistry;
-  /**
-   * Whether to register built-in views automatically
-   * @default true
-   */
-  registerBuiltInViews?: boolean;
 }
 
 /**
@@ -97,7 +87,7 @@ export interface ExtendedCalendarConfig extends CalendarConfig {
  * calendar.registerView(ExtendedMonthView);
  * ```
  */
-export class Calendar<T = Dayjs> {
+export class Calendar<T = Date> {
   private container: HTMLElement;
   private config: ResolvedCalendarConfig;
   private adapter: DateAdapter<T>;
@@ -136,8 +126,9 @@ export class Calendar<T = Dayjs> {
     // 2. Merge configuration with defaults
     this.config = this.mergeConfig(config);
 
-    // 3. Initialize date adapter
-    this.adapter = (config.dateAdapter || new DayJsAdapter()) as DateAdapter<T>;
+    // 3. Initialize date adapter (defaults to zero-dependency NativeDateAdapter)
+    this.adapter = (config.dateAdapter ||
+      new NativeDateAdapter()) as unknown as DateAdapter<T>;
     this.currentDate = this.adapter.create();
     this.currentViewType = this.config.view.type;
 
@@ -163,12 +154,29 @@ export class Calendar<T = Dayjs> {
       this.eventManager,
     );
 
-    // 6. Initialize view registry
-    this.viewRegistry = config.viewRegistry || defaultViewRegistry;
+    // 6. Initialize view registry (no built-in views by default for tree-shaking)
+    // Use createCalendar() from presets for batteries-included experience
+    this.viewRegistry = config.viewRegistry || new ViewRegistry();
 
-    // 7. Register built-in views if needed
-    if (config.registerBuiltInViews !== false) {
-      this.registerBuiltInViews();
+    // 7. Validate that views are registered for the requested view type
+    if (this.viewRegistry.size === 0) {
+      throw new Error(
+        `Calendar: No views registered. ` +
+          `Use createCalendar() for batteries-included setup, or register views manually:\n` +
+          `  import { Calendar, ViewRegistry, MonthView, WeekView, DayView } from '@taskgenius/calendar';\n` +
+          `  const registry = new ViewRegistry();\n` +
+          `  registry.register(MonthView);\n` +
+          `  new Calendar('#app', { viewRegistry: registry });`,
+      );
+    }
+
+    if (!this.viewRegistry.has(this.currentViewType)) {
+      const available = this.viewRegistry.getTypes().join(", ") || "none";
+      throw new Error(
+        `Calendar: View type '${this.currentViewType}' is not registered. ` +
+          `Available views: ${available}. ` +
+          `Either change view.type in config or register the required view.`,
+      );
     }
 
     // 8. Create view context
@@ -439,19 +447,6 @@ export class Calendar<T = Dayjs> {
   // ==========================================================================
   // Private Methods
   // ==========================================================================
-
-  private registerBuiltInViews(): void {
-    // Register built-in views if not already registered
-    if (!this.viewRegistry.has("month")) {
-      this.viewRegistry.register(MonthView as ViewClass);
-    }
-    if (!this.viewRegistry.has("week")) {
-      this.viewRegistry.register(WeekView as ViewClass);
-    }
-    if (!this.viewRegistry.has("day")) {
-      this.viewRegistry.register(DayView as ViewClass);
-    }
-  }
 
   private createViewContext(): ViewContext<T> {
     return {

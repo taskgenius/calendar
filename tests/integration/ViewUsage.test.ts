@@ -1,6 +1,11 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { Calendar } from "../../src/core/Calendar";
-import { BaseView, ViewRegistry, type ViewMeta } from "../../src/views";
+import {
+  BaseView,
+  ViewRegistry,
+  type ViewMeta,
+  MonthView,
+} from "../../src/views";
 import type { CalendarEvent } from "../../src/types";
 
 describe("Custom view usage", () => {
@@ -37,10 +42,7 @@ describe("Custom view usage", () => {
         mountSpy();
       }
 
-      render(
-        containerEl: HTMLElement,
-        events: CalendarEvent[],
-      ): void {
+      render(containerEl: HTMLElement, events: CalendarEvent[]): void {
         renderSpy(events);
         const marker = document.createElement("div");
         marker.className = "custom-view";
@@ -54,7 +56,6 @@ describe("Custom view usage", () => {
 
     calendar = new Calendar("#test-calendar", {
       viewRegistry: registry,
-      registerBuiltInViews: false,
       view: { type: "custom-view" },
     });
 
@@ -86,6 +87,7 @@ describe("Custom view usage", () => {
 
     const registry = new ViewRegistry();
     registry.register(SwitchableView);
+    registry.register(MonthView); // Register month view so we can switch to it
 
     calendar = new Calendar("#test-calendar", {
       viewRegistry: registry,

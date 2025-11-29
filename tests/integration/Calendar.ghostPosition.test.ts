@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { Calendar } from "../../src/core/Calendar";
 import type { CalendarEvent } from "../../src/types";
+import { createTestCalendar } from "../helpers/createTestCalendar";
 
 describe("Ghost element positioning during drag", () => {
   let container: HTMLDivElement;
@@ -72,7 +73,7 @@ describe("Ghost element positioning during drag", () => {
         },
       ];
 
-      calendar = new Calendar("#ghost-test-calendar", {
+      calendar = createTestCalendar("#ghost-test-calendar", {
         view: { type: "month" },
         events,
       });
@@ -145,7 +146,7 @@ describe("Ghost element positioning during drag", () => {
         },
       ];
 
-      calendar = new Calendar("#ghost-test-calendar", {
+      calendar = createTestCalendar("#ghost-test-calendar", {
         view: { type: "month" },
         events,
       });
@@ -227,7 +228,7 @@ describe("Ghost element positioning during drag", () => {
         },
       ];
 
-      calendar = new Calendar("#ghost-test-calendar", {
+      calendar = createTestCalendar("#ghost-test-calendar", {
         view: { type: "month" },
         events,
       });
@@ -302,7 +303,7 @@ describe("Ghost element positioning during drag", () => {
         },
       ];
 
-      calendar = new Calendar("#ghost-test-calendar", {
+      calendar = createTestCalendar("#ghost-test-calendar", {
         view: { type: "month" },
         events,
       });
@@ -387,7 +388,7 @@ describe("Ghost element positioning during drag", () => {
         },
       ];
 
-      calendar = new Calendar("#ghost-test-calendar", {
+      calendar = createTestCalendar("#ghost-test-calendar", {
         view: { type: "month" },
         events,
       });
@@ -467,7 +468,7 @@ describe("Ghost element positioning during drag", () => {
         },
       ];
 
-      calendar = new Calendar("#ghost-test-calendar", {
+      calendar = createTestCalendar("#ghost-test-calendar", {
         view: { type: "month" },
         events,
       });
@@ -535,7 +536,7 @@ describe("Ghost element positioning during drag", () => {
         },
       ];
 
-      calendar = new Calendar("#ghost-test-calendar", {
+      calendar = createTestCalendar("#ghost-test-calendar", {
         view: { type: "week" },
         events,
       });
@@ -624,7 +625,7 @@ describe("Ghost element positioning during drag", () => {
         },
       ];
 
-      calendar = new Calendar("#ghost-test-calendar", {
+      calendar = createTestCalendar("#ghost-test-calendar", {
         view: { type: "week" },
         events,
       });
@@ -703,7 +704,7 @@ describe("Ghost element positioning during drag", () => {
         },
       ];
 
-      calendar = new Calendar("#ghost-test-calendar", {
+      calendar = createTestCalendar("#ghost-test-calendar", {
         view: { type: "week" },
         events,
       });
@@ -783,7 +784,7 @@ describe("Ghost element positioning during drag", () => {
         },
       ];
 
-      calendar = new Calendar("#ghost-test-calendar", {
+      calendar = createTestCalendar("#ghost-test-calendar", {
         view: { type: "week" },
         events,
       });
@@ -862,13 +863,13 @@ describe("Ghost element positioning during drag", () => {
         },
       ];
 
-      calendar = new Calendar("#ghost-test-calendar", {
+      calendar = createTestCalendar("#ghost-test-calendar", {
         view: { type: "week" },
         events,
       });
 
       // Create second calendar with different date
-      const calendar2 = new Calendar("#ghost-test-calendar-2", {
+      const calendar2 = createTestCalendar("#ghost-test-calendar-2", {
         view: { type: "week" },
         events: [
           {

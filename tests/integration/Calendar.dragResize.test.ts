@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { Calendar } from "../../src/core/Calendar";
 import type { CalendarEvent } from "../../src/types";
+import { createTestCalendar } from "../helpers/createTestCalendar";
 
 describe("Calendar drag vs resize callbacks", () => {
   let container: HTMLDivElement;
@@ -32,7 +33,7 @@ describe("Calendar drag vs resize callbacks", () => {
     const onDrop = vi.fn();
     const onResize = vi.fn();
 
-    calendar = new Calendar("#test-calendar", {
+    calendar = createTestCalendar("#test-calendar", {
       events,
       onEventDrop: onDrop,
       onEventResize: onResize,
@@ -85,7 +86,7 @@ describe("Calendar drag vs resize callbacks", () => {
     const onDrop = vi.fn();
     const onResize = vi.fn();
 
-    calendar = new Calendar("#test-calendar", {
+    calendar = createTestCalendar("#test-calendar", {
       events,
       onEventDrop: onDrop,
       onEventResize: onResize,
@@ -175,7 +176,7 @@ describe("Calendar drag vs resize (DOM-driven)", () => {
     const onDrop = vi.fn();
     const onResize = vi.fn();
 
-    calendar = new Calendar("#drag-dom-calendar", {
+    calendar = createTestCalendar("#drag-dom-calendar", {
       view: { type: "week" },
       events,
       onEventDrop: onDrop,
@@ -190,6 +191,10 @@ describe("Calendar drag vs resize (DOM-driven)", () => {
     const column = container.querySelector(
       '.tg-day-column[data-date="2025-11-20"]',
     ) as HTMLElement;
+
+    if (!column) {
+      throw new Error("Column not found - view may not have rendered");
+    }
 
     // JSDOM does not provide layout; stub geometry and hit-testing.
     vi.spyOn(column, "getBoundingClientRect").mockReturnValue({
@@ -241,7 +246,7 @@ describe("Calendar drag vs resize (DOM-driven)", () => {
     const onDrop = vi.fn();
     const onResize = vi.fn();
 
-    calendar = new Calendar("#drag-dom-calendar", {
+    calendar = createTestCalendar("#drag-dom-calendar", {
       view: { type: "week" },
       events,
       onEventDrop: onDrop,
@@ -253,10 +258,19 @@ describe("Calendar drag vs resize (DOM-driven)", () => {
     const eventEl = container.querySelector(
       '[data-eid="dom-resize"]',
     ) as HTMLElement;
+
+    if (!eventEl) {
+      throw new Error("Event element not found - view may not have rendered");
+    }
+
     const bottomHandle = eventEl.querySelector(".tg-bottom") as HTMLElement;
     const column = container.querySelector(
       '.tg-day-column[data-date="2025-11-22"]',
     ) as HTMLElement;
+
+    if (!column) {
+      throw new Error("Column not found - view may not have rendered");
+    }
 
     vi.spyOn(column, "getBoundingClientRect").mockReturnValue({
       width: 200,

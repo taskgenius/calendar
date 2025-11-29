@@ -227,7 +227,11 @@ export class ViewRegistry {
 }
 
 /**
- * Default global view registry instance
- * Used when no custom registry is provided to Calendar
+ * Factory function to create a new ViewRegistry instance
+ * Use this instead of a global singleton for better tree-shaking
+ *
+ * @returns A new ViewRegistry instance
  */
-export const defaultViewRegistry = new ViewRegistry();
+export function createViewRegistry(): ViewRegistry {
+  return new ViewRegistry();
+}

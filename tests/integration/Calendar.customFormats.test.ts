@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { Calendar } from "../../src/core/Calendar";
 import { NativeDateAdapter } from "../../src/adapters/NativeDateAdapter";
 import type { CalendarEvent } from "../../src/types";
+import { createTestCalendar } from "../helpers/createTestCalendar";
 
 describe("Calendar - Custom Date Formats Integration", () => {
   describe("with custom dateFormats configuration", () => {
@@ -9,7 +10,7 @@ describe("Calendar - Custom Date Formats Integration", () => {
       const container = document.createElement("div");
       let capturedDate: Date | null = null;
 
-      const calendar = new Calendar(container, {
+      const calendar = createTestCalendar(container, {
         view: { type: "month" },
         dateFormats: {
           date: "yyyy/MM/dd",
@@ -48,7 +49,7 @@ describe("Calendar - Custom Date Formats Integration", () => {
         },
       ];
 
-      const calendar = new Calendar(container, {
+      const calendar = createTestCalendar(container, {
         view: { type: "week" },
         dateAdapter: adapter,
         dateFormats: {
@@ -72,7 +73,7 @@ describe("Calendar - Custom Date Formats Integration", () => {
       let droppedStart: Date | null = null;
       let droppedEnd: Date | null = null;
 
-      const calendar = new Calendar(container, {
+      const calendar = createTestCalendar(container, {
         view: { type: "week" },
         dateFormats: {
           date: "yyyy/MM/dd",
@@ -113,7 +114,7 @@ describe("Calendar - Custom Date Formats Integration", () => {
     it("should still work with old headerFormat configuration", () => {
       const container = document.createElement("div");
 
-      const calendar = new Calendar(container, {
+      const calendar = createTestCalendar(container, {
         view: { type: "month" },
         headerFormat: {
           month: "YYYY年 M月",
@@ -130,7 +131,7 @@ describe("Calendar - Custom Date Formats Integration", () => {
     it("should prioritize dateFormats over headerFormat", () => {
       const container = document.createElement("div");
 
-      const calendar = new Calendar(container, {
+      const calendar = createTestCalendar(container, {
         view: { type: "month" },
         dateFormats: {
           monthHeader: "MMMM yyyy",
@@ -153,7 +154,7 @@ describe("Calendar - Custom Date Formats Integration", () => {
     it("getCurrentDate should always return ISO format", () => {
       const container = document.createElement("div");
 
-      const calendar = new Calendar(container, {
+      const calendar = createTestCalendar(container, {
         view: { type: "month" },
         dateFormats: {
           date: "dd/MM/yyyy", // Non-ISO format
@@ -174,7 +175,7 @@ describe("Calendar - Custom Date Formats Integration", () => {
       const container = document.createElement("div");
       const capturedDates: Date[] = [];
 
-      const calendar = new Calendar(container, {
+      const calendar = createTestCalendar(container, {
         view: { type: "month" },
         dateFormats: {
           date: "yyyy/MM/dd",

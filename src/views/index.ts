@@ -15,7 +15,7 @@ export type {
 } from "./BaseView";
 
 // Registry
-export { ViewRegistry, defaultViewRegistry } from "./ViewRegistry";
+export { ViewRegistry, createViewRegistry } from "./ViewRegistry";
 export type { ViewRegistrationOptions } from "./ViewRegistry";
 
 // Built-in views

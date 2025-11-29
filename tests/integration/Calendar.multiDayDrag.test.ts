@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { Calendar } from "../../src/core/Calendar";
 import type { CalendarEvent } from "../../src/types";
+import { createTestCalendar } from "../helpers/createTestCalendar";
 
 /**
  * Tests for multi-day event drag behavior
@@ -43,7 +44,7 @@ describe("Multi-day event drag preserves duration", () => {
 
     const onDrop = vi.fn();
 
-    calendar = new Calendar("#test-calendar", {
+    calendar = createTestCalendar("#test-calendar", {
       view: { type: "month" },
       events,
       onEventDrop: onDrop,
@@ -97,7 +98,7 @@ describe("Multi-day event drag preserves duration", () => {
 
     const onDrop = vi.fn();
 
-    calendar = new Calendar("#test-calendar", {
+    calendar = createTestCalendar("#test-calendar", {
       view: { type: "month" },
       events,
       onEventDrop: onDrop,
@@ -155,7 +156,7 @@ describe("Multi-day event drag preserves duration", () => {
 
     const onDrop = vi.fn();
 
-    calendar = new Calendar("#test-calendar", {
+    calendar = createTestCalendar("#test-calendar", {
       view: { type: "month" },
       events,
       onEventDrop: onDrop,
@@ -243,7 +244,7 @@ describe("Multi-day event drag with handleMonthMove", () => {
 
     const onDrop = vi.fn();
 
-    calendar = new Calendar("#multi-day-drag-calendar", {
+    calendar = createTestCalendar("#multi-day-drag-calendar", {
       view: { type: "month" },
       events,
       onEventDrop: onDrop,
@@ -327,7 +328,11 @@ describe("Multi-day event drag with handleMonthMove", () => {
 
     // Clean up - trigger mouseup to end drag
     document.dispatchEvent(
-      new MouseEvent("mouseup", { bubbles: true, clientX: clickX, clientY: 40 }),
+      new MouseEvent("mouseup", {
+        bubbles: true,
+        clientX: clickX,
+        clientY: 40,
+      }),
     );
   });
 
@@ -344,7 +349,7 @@ describe("Multi-day event drag with handleMonthMove", () => {
 
     const onDrop = vi.fn();
 
-    calendar = new Calendar("#multi-day-drag-calendar", {
+    calendar = createTestCalendar("#multi-day-drag-calendar", {
       view: { type: "month" },
       events,
       onEventDrop: onDrop,
@@ -506,7 +511,7 @@ describe("Cross-midnight event drag behavior", () => {
 
     const onDrop = vi.fn();
 
-    calendar = new Calendar("#test-calendar", {
+    calendar = createTestCalendar("#test-calendar", {
       view: { type: "month" },
       events,
       onEventDrop: onDrop,
