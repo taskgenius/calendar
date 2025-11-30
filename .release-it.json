@@ -16,6 +16,7 @@
   },
   "hooks": {
     "before:init": ["npm run test"],
-    "after:bump": ["npm run build"]
+    "after:bump": ["npm run build"],
+    "after:release": ["npm run deploy:demo"]
   }
 }
