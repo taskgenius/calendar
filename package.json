@@ -52,7 +52,7 @@
     "docs": "typedoc src/index.ts",
     "demo": "cd examples/demo && npm run dev",
     "build:demo": "cd examples/demo && npx vite build",
-    "deploy:demo": "npm run build:demo && npx wrangler pages deploy examples/demo/dist --project-name=taskgenius-calendar-demo",
+    "deploy:demo": "npm run build:demo && npx wrangler pages deploy examples/demo/dist --project-name=taskgenius-calendar-demo --commit-dirty=true",
     "prepublishOnly": "npm run build && npm run test",
     "release": "release-it",
     "release:patch": "release-it patch",
