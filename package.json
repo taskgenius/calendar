@@ -27,6 +27,11 @@
       "import": "./dist/adapters/date-fns.js",
       "require": "./dist/adapters/date-fns.cjs"
     },
+    "./moment": {
+      "types": "./dist/adapters/moment.d.ts",
+      "import": "./dist/adapters/moment.js",
+      "require": "./dist/adapters/moment.cjs"
+    },
     "./styles.css": {
       "default": "./dist/styles.css"
     },

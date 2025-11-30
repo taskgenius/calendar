@@ -45,6 +45,7 @@ export default defineConfig({
           __dirname,
           "src/adapters/DateFnsAdapter.ts",
         ),
+        "adapters/moment": resolve(__dirname, "src/adapters/MomentAdapter.ts"),
       },
       formats: ["es", "cjs"],
       fileName: (format, entryName) => {
