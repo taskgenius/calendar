@@ -16,19 +16,49 @@ export class NativeDateAdapter implements DateAdapter<Date> {
   }
 
   parse(dateStr: string, _format?: string): Date {
-    // Support ISO format with - or / separators: yyyy-MM-dd, yyyy/MM/dd, etc.
+    // Support multiple formats:
+    // - Date only: yyyy-MM-dd, yyyy/MM/dd
+    // - DateTime with space: yyyy-MM-dd HH:mm, yyyy-MM-dd HH:mm:ss
+    // - ISO 8601 with T: yyyy-MM-ddTHH:mm:ss, yyyy-MM-ddTHH:mm:ss.sssZ
     // Format parameter is ignored as native Date is limited
 
     // Normalize separators to - for consistent parsing
     const normalized = dateStr.replace(/\//g, "-");
 
+    // ISO 8601 format with T separator
+    if (normalized.includes("T")) {
+      const [datePart, timePart] = normalized.split("T");
+      const [year, month, day] = datePart!.split("-").map(Number);
+      // Remove timezone suffix (Z, +08:00, -05:00) to treat as local time
+      const timeOnly = timePart!.replace(/[Z+-].*$/, "");
+      const timeParts = timeOnly.split(":").map(Number);
+      const [hour, minute, second] = timeParts;
+      return new Date(
+        year!,
+        month! - 1,
+        day!,
+        hour ?? 0,
+        minute ?? 0,
+        second ?? 0,
+      );
+    }
+
+    // Space-separated datetime format
     if (normalized.includes(" ")) {
-      // Has time component
       const [datePart, timePart] = normalized.split(" ");
       const [year, month, day] = datePart!.split("-").map(Number);
-      const [hour, minute] = timePart!.split(":").map(Number);
-      return new Date(year!, month! - 1, day, hour, minute);
+      const timeParts = timePart!.split(":").map(Number);
+      const [hour, minute, second] = timeParts;
+      return new Date(
+        year!,
+        month! - 1,
+        day!,
+        hour ?? 0,
+        minute ?? 0,
+        second ?? 0,
+      );
     }
+
     // Date only
     const [year, month, day] = normalized.split("-").map(Number);
     return new Date(year!, month! - 1, day!);
