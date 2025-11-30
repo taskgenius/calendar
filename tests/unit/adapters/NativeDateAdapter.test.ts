@@ -32,13 +32,72 @@ describe("NativeDateAdapter", () => {
       expect(result.getDate()).toBe(15);
     });
 
-    it("should parse date-time string", () => {
+    it("should parse date-time string with space separator", () => {
       const result = adapter.parse("2025-01-15 14:30");
       expect(result.getFullYear()).toBe(2025);
       expect(result.getMonth()).toBe(0);
       expect(result.getDate()).toBe(15);
       expect(result.getHours()).toBe(14);
       expect(result.getMinutes()).toBe(30);
+    });
+
+    it("should parse date-time string with seconds", () => {
+      const result = adapter.parse("2025-01-15 14:30:45");
+      expect(result.getFullYear()).toBe(2025);
+      expect(result.getMonth()).toBe(0);
+      expect(result.getDate()).toBe(15);
+      expect(result.getHours()).toBe(14);
+      expect(result.getMinutes()).toBe(30);
+      expect(result.getSeconds()).toBe(45);
+    });
+
+    it("should parse ISO 8601 format with T separator", () => {
+      const result = adapter.parse("2025-01-15T14:30:45");
+      expect(result.getFullYear()).toBe(2025);
+      expect(result.getMonth()).toBe(0);
+      expect(result.getDate()).toBe(15);
+      expect(result.getHours()).toBe(14);
+      expect(result.getMinutes()).toBe(30);
+      expect(result.getSeconds()).toBe(45);
+    });
+
+    it("should parse ISO 8601 format without seconds", () => {
+      const result = adapter.parse("2025-01-15T14:30");
+      expect(result.getFullYear()).toBe(2025);
+      expect(result.getMonth()).toBe(0);
+      expect(result.getDate()).toBe(15);
+      expect(result.getHours()).toBe(14);
+      expect(result.getMinutes()).toBe(30);
+    });
+
+    it("should parse ISO 8601 with Z suffix as local time", () => {
+      const result = adapter.parse("2025-01-15T14:30:45Z");
+      expect(result.getFullYear()).toBe(2025);
+      expect(result.getMonth()).toBe(0);
+      expect(result.getDate()).toBe(15);
+      expect(result.getHours()).toBe(14);
+      expect(result.getMinutes()).toBe(30);
+      expect(result.getSeconds()).toBe(45);
+    });
+
+    it("should parse ISO 8601 with timezone offset as local time", () => {
+      const result = adapter.parse("2025-01-15T14:30:45+08:00");
+      expect(result.getFullYear()).toBe(2025);
+      expect(result.getMonth()).toBe(0);
+      expect(result.getDate()).toBe(15);
+      expect(result.getHours()).toBe(14);
+      expect(result.getMinutes()).toBe(30);
+      expect(result.getSeconds()).toBe(45);
+    });
+
+    it("should parse ISO 8601 with milliseconds", () => {
+      const result = adapter.parse("2025-01-15T14:30:45.123Z");
+      expect(result.getFullYear()).toBe(2025);
+      expect(result.getMonth()).toBe(0);
+      expect(result.getDate()).toBe(15);
+      expect(result.getHours()).toBe(14);
+      expect(result.getMinutes()).toBe(30);
+      expect(result.getSeconds()).toBe(45);
     });
   });
 
