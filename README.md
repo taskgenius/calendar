@@ -29,11 +29,11 @@ A lightweight, configurable TypeScript calendar component library with drag-and-
 npm install @taskgenius/calendar dayjs
 ```
 
-## 🚀 Quick Start
+## Quick Start
 
 ```typescript
 import { Calendar } from '@taskgenius/calendar';
-import '@taskgenius/calendar/styles.css'; // ⚠️ Required - component uses CSS classes
+import '@taskgenius/calendar/styles.css'; // Required - component uses CSS classes
 
 // Method 1: Pass CSS selector string
 const calendar = new Calendar('#app', {
@@ -62,7 +62,7 @@ const calendar2 = new Calendar(container, {
 });
 ```
 
-## 🌲 Tree Shaking & Optimization
+## Tree Shaking & Optimization
 
 For users who want to minimize bundle size, you can use `CalendarCore` instead of `Calendar`. The `CalendarCore` class does not import any built-in views by default, allowing your bundler to exclude unused view code.
 
@@ -115,9 +115,9 @@ const calendar = new CalendarCore('#app', {
 - **Use `Calendar`**: Quick start, prototyping, or when bundle size is not a concern
 - **Use `CalendarCore`**: Production builds where bundle optimization is important
 
-## 🎨 Styles
+## Styles
 
-**⚠️ Important**: The component **requires** `@taskgenius/calendar/styles.css` to render correctly. Since v0.4.0, all layout and styling use external CSS classes instead of inline styles.
+**Important**: The component **requires** `@taskgenius/calendar/styles.css` to render correctly. Since v0.4.0, all layout and styling use external CSS classes instead of inline styles.
 
 **Import options**:
 - **ES modules**: `import '@taskgenius/calendar/styles.css';` (recommended)
@@ -127,13 +127,13 @@ const calendar = new CalendarCore('#app', {
 - Theme settings are delivered via CSS variables: `--tg-primary-color`, `--tg-primary-rgb`, `--tg-cell-height`, `--tg-font-header`, `--tg-font-event`. The library sets these on the `.tg-calendar` root; you can override them in your own styles.
 - To fully customize the look, you can override the default CSS or provide your own styles using the exposed `tg-*` class names.
 
-## 📖 API Reference
+## API Reference
 
 ### Calendar Class
 
 The main entry point for the calendar component. This class extends `CalendarCore` and automatically registers all built-in views (Month, Week, Day) for a "batteries-included" experience. Perfect for quick starts and when bundle size is not a primary concern.
 
-**For advanced users**: Use `CalendarCore` directly for a leaner, tree-shakeable version that requires manual view registration. See the [Tree Shaking & Optimization](#-tree-shaking--optimization) section for details.
+**For advanced users**: Use `CalendarCore` directly for a leaner, tree-shakeable version that requires manual view registration. See the [Tree Shaking & Optimization](#tree-shaking--optimization) section for details.
 
 #### Constructor
 
@@ -299,13 +299,13 @@ interface CalendarEvent {
 }
 ```
 
-## 🎨 Examples
+## Examples
 
 ### Basic Usage
 
 ```typescript
 import { Calendar } from '@taskgenius/calendar';
-import '@taskgenius/calendar/styles.css'; // ⚠️ Required
+import '@taskgenius/calendar/styles.css'; // Required
 
 // Initialize with CSS selector
 const calendar = new Calendar('#calendar-container');
@@ -622,7 +622,7 @@ const calendar = new Calendar('#app', {
 });
 ```
 
-## 🏗️ Architecture
+## Architecture
 
 The library follows SOLID principles with a modular architecture:
 
@@ -646,7 +646,7 @@ src/
 - **MonthRenderer/TimeRenderer** - DOM generation
 - **DateAdapter** - Pluggable date library interface
 
-## 🧪 Testing
+## Testing
 
 ```bash
 # Run tests
@@ -659,7 +659,7 @@ npm run test:ui
 npm run test:coverage
 ```
 
-## 💡 Best Practices
+## Best Practices
 
 ### Memory Management
 
@@ -720,7 +720,7 @@ useEffect(() => {
 }, []);
 ```
 
-## 🔨 Development
+## Development
 
 ```bash
 # Install dependencies
@@ -736,7 +736,7 @@ npm run build
 npx tsc --noEmit
 ```
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 @taskgenius/calendar/
@@ -751,7 +751,7 @@ npx tsc --noEmit
 └── docs/               # Documentation
 ```
 
-## 🔄 Date Adapters
+## Date Adapters
 
 The library uses a pluggable date adapter system. By default, it uses Day.js.
 
@@ -775,11 +775,11 @@ interface DateAdapter<T> {
 }
 ```
 
-## 📄 License
+## License
 
 MIT ©TaskGenius
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome! Please read the contributing guidelines before submitting a PR.
 
